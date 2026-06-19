@@ -1,0 +1,21 @@
+name: tech_app
+description: Technician facing mobile application for ScanGo home medical services.
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.4.9
+  go_router: ^13.1.0
+  dio: ^5.9.2
+  socket_io_client: ^2.0.3+1
+  shared_preferences: ^2.5.5
+  flutter_map: ^6.2.1
+  latlong2: ^0.9.1
+  path_provider: ^2.1.6
+  firebase_messaging: ^16.4.0
