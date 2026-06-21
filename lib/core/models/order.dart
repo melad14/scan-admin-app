@@ -103,8 +103,8 @@ class MedicalOrder {
       statusHistory: (json['statusHistory'] as List? ?? [])
           .map((item) => OrderStatusLog.fromJson(item))
           .toList(),
-      technician: json['technician'] != null
-          ? MedicalTechnician.fromJson(json['technician'])
+      technician: (json['technician'] != null && json['technician'] is Map<String, dynamic>)
+          ? MedicalTechnician.fromJson(json['technician'] as Map<String, dynamic>)
           : null,
       report: json['report'] != null ? OrderReport.fromJson(json['report']) : null,
       technicianRating: (json['technicianRating'] as num?)?.toDouble(),

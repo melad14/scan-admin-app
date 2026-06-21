@@ -182,7 +182,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
               Text(_isAvailable ? 'نشط للعمل' : 'مغلق', style: const TextStyle(fontSize: 12)),
               Switch(
                 value: _isAvailable,
-                activeColor: Colors.amber,
+                activeColor: const Color(0xFF0D9488),
                 onChanged: _isLoading ? null : (_) => _toggleDuty(),
               ),
             ],
@@ -191,8 +191,8 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.amber,
-          labelColor: Colors.amber,
+          indicatorColor: const Color(0xFF0D9488),
+          labelColor: const Color(0xFF0D9488),
           tabs: const [
             Tab(text: 'الطلبات المتاحة'),
             Tab(text: 'الطلب النشط'),
@@ -231,7 +231,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(order.orderNumber, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
+                            Text(order.orderNumber, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
                             Text('${order.pricing?['total']} ج.م', style: const TextStyle(fontWeight: FontWeight.bold)),
                           ],
                         ),
@@ -242,7 +242,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () => _acceptOrder(order.id),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white),
                           child: const Text('قبول الطلب وتأكيد الانتقال'),
                         ),
                       ],
@@ -269,7 +269,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
           // Order Header
           Text(
             'طلب نشط رقم ${order.orderNumber}',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -301,7 +301,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
           if (order.status == 'assigned') ...[
             ElevatedButton(
               onPressed: () => _updateStatus('/technician/orders/${order.id}/start-trip', 'تم بدء الرحلة للمريض'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black, padding: const EdgeInsets.all(16)),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white, padding: const EdgeInsets.all(16)),
               child: const Text('بدء الرحلة والتوجه للمريض (Start Trip)', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ] else if (order.status == 'on_way') ...[

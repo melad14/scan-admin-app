@@ -41,6 +41,14 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    window.didCreateEngineInitializer = async function(engineInitializer) {
+      const appRunner = await engineInitializer.initializeEngine({
+        renderer: "html"
+      });
+      await appRunner.runApp();
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
