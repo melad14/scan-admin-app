@@ -56,7 +56,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.textOnPrimary,
-          minimumSize: const Size(double.infinity, 56),
+          minimumSize: const Size(88, 56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -73,7 +73,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
-          minimumSize: const Size(double.infinity, 56),
+          minimumSize: const Size(88, 56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

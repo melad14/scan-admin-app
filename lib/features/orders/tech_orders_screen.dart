@@ -4,6 +4,7 @@ import 'package:tech_app/core/api/api_client.dart';
 import 'package:tech_app/core/models/order.dart';
 import 'package:tech_app/core/services/storage_service.dart';
 import 'package:tech_app/core/utils/constants.dart';
+import 'package:tech_app/core/theme/app_colors.dart';
 
 class TechOrdersScreen extends StatefulWidget {
   const TechOrdersScreen({super.key});
@@ -182,7 +183,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
               Text(_isAvailable ? 'نشط للعمل' : 'مغلق', style: const TextStyle(fontSize: 12)),
               Switch(
                 value: _isAvailable,
-                activeColor: const Color(0xFF0D9488),
+                activeColor: AppColors.primary,
                 onChanged: _isLoading ? null : (_) => _toggleDuty(),
               ),
             ],
@@ -191,8 +192,8 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFF0D9488),
-          labelColor: const Color(0xFF0D9488),
+          indicatorColor: AppColors.primary,
+          labelColor: AppColors.primary,
           tabs: const [
             Tab(text: 'الطلبات المتاحة'),
             Tab(text: 'الطلب النشط'),
@@ -222,7 +223,6 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
               itemBuilder: (context, index) {
                 final order = _availableOrders[index];
                 return Card(
-                  color: const Color(0xFF131B2E),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -231,19 +231,38 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(order.orderNumber, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D9488))),
-                            Text('${order.pricing?['total']} ج.م', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(
+                              order.orderNumber,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                            Text(
+                              '${order.pricing?['total']} ج.م',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text('الموقع: ${order.location?['district']} - الشارع: ${order.location?['street']}', style: const TextStyle(fontSize: 13)),
                         const SizedBox(height: 8),
-                        Text('الفحوصات: ${order.services.map((s) => s.nameAr).join(' + ')}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                        Text('الفحوصات: ${order.services.map((s) => s.nameAr).join(' + ')}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                         const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => _acceptOrder(order.id),
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white),
-                          child: const Text('قبول الطلب وتأكيد الانتقال'),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => _acceptOrder(order.id),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('قبول الطلب وتأكيد الانتقال'),
+                          ),
                         ),
                       ],
                     ),
@@ -269,14 +288,18 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
           // Order Header
           Text(
             'طلب نشط رقم ${order.orderNumber}',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+              fontFamily: 'Inter',
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
 
           // Patient details card
           Card(
-            color: const Color(0xFF131B2E),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -301,19 +324,31 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
           if (order.status == 'assigned') ...[
             ElevatedButton(
               onPressed: () => _updateStatus('/technician/orders/${order.id}/start-trip', 'تم بدء الرحلة للمريض'),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white, padding: const EdgeInsets.all(16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warning,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.all(16),
+              ),
               child: const Text('بدء الرحلة والتوجه للمريض (Start Trip)', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ] else if (order.status == 'on_way') ...[
             ElevatedButton(
               onPressed: () => _updateStatus('/technician/orders/${order.id}/arrived', 'تم تسجيل وصولك للموقع'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, padding: const EdgeInsets.all(16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.all(16),
+              ),
               child: const Text('لقد وصلت لموقع المريض (Arrived)', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ] else if (order.status == 'arrived') ...[
             ElevatedButton(
               onPressed: () => _updateStatus('/technician/orders/${order.id}/start-service', 'بدء الفحص الطبي'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, padding: const EdgeInsets.all(16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.info,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.all(16),
+              ),
               child: const Text('بدء إجراء الفحص الطبي (Start Service)', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ] else if (order.status == 'in_progress') ...[
@@ -321,7 +356,6 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
             const Text('رفع التقارير الطبية ونتائج الفحص:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Card(
-              color: const Color(0xFF131B2E),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -349,7 +383,11 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _completeOrder,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.all(14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(14),
+                      ),
                       child: const Text('تأكيد رفع النتائج وإكمال الطلب'),
                     ),
                   ],
@@ -373,11 +411,23 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
               itemBuilder: (context, index) {
                 final order = _historyOrders[index];
                 return Card(
-                  color: const Color(0xFF131B2E),
                   child: ListTile(
-                    title: Text(order.orderNumber, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      order.orderNumber,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
                     subtitle: Text('${order.patientSnapshot?['name']} - الفحوصات: ${order.services.map((s) => s.nameEn).join(', ')}'),
-                    trailing: Text('${order.pricing?['total']} ج.م', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                    trailing: Text(
+                      '${order.pricing?['total']} ج.م',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.success,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
                   ),
                 );
               },
