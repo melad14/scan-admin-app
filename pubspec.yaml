@@ -19,3 +19,6 @@ dependencies:
   latlong2: ^0.9.1
   path_provider: ^2.1.6
   firebase_messaging: ^16.4.0
+
+flutter:
+  uses-material-design: true

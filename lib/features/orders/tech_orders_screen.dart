@@ -146,7 +146,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen> with SingleTickerPr
       final orderId = _activeOrder!.id;
       final payload = {
         'images': _uploadedImageUrls,
-        'pdf': 'http://localhost:3000/uploads/reports/mock-result.pdf', // Mock PDF report
+        'pdf': '${Constants.socketUrl}/uploads/reports/mock-result.pdf', // Mock PDF report
         'notes': _reportNotesController.text.trim()
       };
 
