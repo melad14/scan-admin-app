@@ -50,11 +50,28 @@ class StorageService {
     await prefs.setString(_keyUserData, jsonEncode(data));
   }
 
+  static const String _keyRejectedOrders = 'rejectedOrders';
+
+  static Future<List<String>> getRejectedOrders() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyRejectedOrders) ?? [];
+  }
+
+  static Future<void> rejectOrder(String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyRejectedOrders) ?? [];
+    if (!list.contains(orderId)) {
+      list.add(orderId);
+      await prefs.setStringList(_keyRejectedOrders, list);
+    }
+  }
+
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyAccessToken);
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyUserRole);
     await prefs.remove(_keyUserData);
+    await prefs.remove(_keyRejectedOrders);
   }
 }

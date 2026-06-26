@@ -1,7 +1,7 @@
 class Constants {
   // Base API URLs
-  static const String apiBaseUrl = 'https://scan-backend-phi.vercel.app/api/v1';
-  static const String socketUrl = 'https://scan-backend-phi.vercel.app';
+  static const String apiBaseUrl = 'https://scan-backend-nine.vercel.app/api/v1';
+  static const String socketUrl = 'https://scan-backend-nine.vercel.app';
 
   // Endpoints
   static const String sendOtp = '/auth/send-otp';
