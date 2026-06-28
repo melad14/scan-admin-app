@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tech_app/core/api/api_client.dart';
 import 'package:tech_app/core/models/order.dart';
 import 'package:tech_app/core/services/storage_service.dart';
 import 'package:tech_app/core/utils/constants.dart';
 import 'package:tech_app/core/theme/app_colors.dart';
+import 'package:tech_app/core/theme/theme_provider.dart';
 import 'package:dio/dio.dart';
 import 'dart:math' as math;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class TechOrdersScreen extends StatefulWidget {
+class TechOrdersScreen extends ConsumerStatefulWidget {
   const TechOrdersScreen({super.key});
   @override
-  State<TechOrdersScreen> createState() => _TechOrdersScreenState();
+  ConsumerState<TechOrdersScreen> createState() => _TechOrdersScreenState();
 }
 
-class _TechOrdersScreenState extends State<TechOrdersScreen>
+class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   late AnimationController _bgController;
@@ -225,9 +227,10 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   }
 
   Future<void> _logout() async {
+    final c = context.colors;
     final ok = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
@@ -235,16 +238,16 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
+                decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
             Container(width: 60, height: 60,
-                decoration: BoxDecoration(color: AppColors.errorBg, borderRadius: BorderRadius.circular(18)),
-                child: const Icon(Icons.logout_rounded, color: AppColors.error, size: 30)),
+                decoration: BoxDecoration(color: c.errorBg, borderRadius: BorderRadius.circular(18)),
+                child: Icon(Icons.logout_rounded, color: c.error, size: 30)),
             const SizedBox(height: 14),
-            const Text('تسجيل الخروج',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            Text('تسجيل الخروج',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary)),
             const SizedBox(height: 6),
-            const Text('هل أنت متأكد؟', style: TextStyle(color: AppColors.textSecondary)),
+            Text('هل أنت متأكد؟', style: TextStyle(color: c.textSecondary)),
             const SizedBox(height: 24),
             Row(children: [
               Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context, false), child: const Text('تراجع'))),
@@ -252,7 +255,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
               Expanded(child: GestureDetector(
                 onTap: () => Navigator.pop(context, true),
                 child: Container(height: 50,
-                    decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(14)),
+                    decoration: BoxDecoration(color: c.error, borderRadius: BorderRadius.circular(14)),
                     child: const Center(child: Text('خروج',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontFamily: 'Cairo', fontSize: 15)))),
               )),
@@ -270,9 +273,10 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
 
   void _showSnack(String msg, {required bool success}) {
     if (!mounted) return;
+    final c = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg, style: const TextStyle(fontFamily: 'Cairo')),
-      backgroundColor: success ? AppColors.successBg : AppColors.errorBg,
+      backgroundColor: success ? c.successBg : c.errorBg,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       duration: const Duration(seconds: 3),
@@ -281,13 +285,20 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+    final isDark = context.isDark;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(statusBarIconBrightness: Brightness.light),
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: c.background,
         body: Stack(
           children: [
-            // Animated orb
+            // Animated background orb
             AnimatedBuilder(
               animation: _bgController,
               builder: (_, __) {
@@ -300,8 +311,8 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(colors: [
-                        AppColors.primary.withValues(alpha: 0.15),
-                        AppColors.primary.withValues(alpha: 0.0),
+                        c.primary.withOpacity(isDark ? 0.12 : 0.04),
+                        c.primary.withOpacity(0.0),
                       ]),
                     ),
                   ),
@@ -335,11 +346,20 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   //  HEADER
   // ══════════════════════════════════════════════════════
   Widget _buildHeader() {
+    final c = context.colors;
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
       decoration: BoxDecoration(
-        gradient: AppColors.appBarGradient,
-        border: const Border(bottom: BorderSide(color: AppColors.border)),
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF0A0F1E), const Color(0xFF0F1729)]
+              : [const Color(0xFF085041), const Color(0xFF1D9E75)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: Border(bottom: BorderSide(color: c.border)),
       ),
       child: Row(
         children: [
@@ -347,9 +367,9 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
           Container(
             width: 44, height: 44,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 12)],
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
             child: const Icon(Icons.medical_services_rounded, color: Colors.white, size: 22),
           ),
@@ -358,13 +378,10 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ShaderMask(
-                  shaderCallback: (b) => AppColors.primaryGradient.createShader(b),
-                  child: const Text('سكان جو',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
-                ),
+                const Text('سكان جو',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
                 Text('مرحباً، $_techName',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    style: const TextStyle(fontSize: 12, color: Color(0xCCFFFFFF))),
               ],
             ),
           ),
@@ -376,14 +393,14 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
               duration: const Duration(milliseconds: 300),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: _isAvailable ? AppColors.successBg : AppColors.surfaceVariant,
+                color: _isAvailable ? c.successBg : c.surfaceVariant.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                    color: _isAvailable ? AppColors.success : AppColors.border, width: 1.5),
+                    color: _isAvailable ? c.success : c.border, width: 1.5),
               ),
               child: _isDutyLoading
-                  ? const SizedBox(width: 14, height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                  ? SizedBox(width: 14, height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: c.primary))
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -391,7 +408,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
                           duration: const Duration(milliseconds: 300),
                           width: 8, height: 8,
                           decoration: BoxDecoration(
-                            color: _isAvailable ? AppColors.success : AppColors.textMuted,
+                            color: _isAvailable ? c.success : c.textMuted,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -399,21 +416,40 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
                         Text(_isAvailable ? 'نشط' : 'مغلق',
                             style: TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w700, fontFamily: 'Cairo',
-                                color: _isAvailable ? AppColors.success : AppColors.textMuted)),
+                                color: _isAvailable ? c.success : c.textMuted)),
                       ],
                     ),
             ),
           ),
           const SizedBox(width: 8),
+          
+          // Theme Toggle Button
+          GestureDetector(
+            onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
+            child: Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.25))),
+              child: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
           GestureDetector(
             onTap: _logout,
             child: Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border)),
-              child: const Icon(Icons.logout_rounded, color: AppColors.textSecondary, size: 18),
+                  border: Border.all(color: Colors.white.withOpacity(0.25))),
+              child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
             ),
           ),
         ],
@@ -422,15 +458,16 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   }
 
   Widget _buildTabBar() {
+    final c = context.colors;
     return Container(
-      color: AppColors.surface,
+      color: c.surface,
       child: TabBar(
         controller: _tabController,
-        indicatorColor: AppColors.primary,
+        indicatorColor: c.primary,
         indicatorWeight: 3,
         indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.textMuted,
+        labelColor: c.primary,
+        unselectedLabelColor: c.textMuted,
         labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, fontSize: 12),
         unselectedLabelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
         tabs: [
@@ -446,9 +483,10 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   //  TAB 1
   // ══════════════════════════════════════════════════════
   Widget _buildAvailableTab() {
+    final c = context.colors;
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.surface,
+      color: c.primary,
+      backgroundColor: c.surface,
       onRefresh: _fetchAvailableOrders,
       child: _isLoadingAvailable
           ? _buildSkeletons()
@@ -474,9 +512,10 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   //  TAB 2
   // ══════════════════════════════════════════════════════
   Widget _buildActiveTab() {
+    final c = context.colors;
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.surface,
+      color: c.primary,
+      backgroundColor: c.surface,
       onRefresh: _fetchActiveOrder,
       child: _isLoadingActive
           ? _buildSkeletons(count: 2)
@@ -489,6 +528,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   }
 
   Widget _buildActiveOrderMap(MedicalOrder order) {
+    final c = context.colors;
     final locObj = order.location;
     double lat = 30.0444;
     double lng = 31.2357;
@@ -513,10 +553,10 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionHead(
+          _SectionHead(
             icon: Icons.map_rounded,
             title: 'موقع الزيارة الجغرافي',
-            color: AppColors.primary,
+            color: c.primary,
           ),
           const SizedBox(height: 14),
           ClipRRect(
@@ -526,7 +566,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: c.border),
               ),
               child: FlutterMap(
                 options: MapOptions(
@@ -582,12 +622,11 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: c.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
-              shadowColor: AppColors.primary.withOpacity(0.3),
+              elevation: 0,
             ),
             icon: const Icon(Icons.navigation_rounded, size: 20),
             label: const Text(
@@ -601,6 +640,8 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   }
 
   Widget _buildActiveContent(MedicalOrder order) {
+    final c = context.colors;
+    final isDark = context.isDark;
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -611,16 +652,16 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              color: c.primary,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: AppColors.cyanGlow,
+              boxShadow: c.primaryGlow,
             ),
             child: Row(
               children: [
                 Container(
                   width: 46, height: 46,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.medical_services_rounded, color: Colors.white, size: 24),
@@ -635,14 +676,14 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
                               fontSize: 15, fontFamily: 'Inter')),
                       const SizedBox(height: 4),
                       Text(AppColors.getStatusLabel(order.status),
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
+                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: Colors.white.withOpacity(0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text('${order.pricing?['total']} ج.م',
@@ -659,7 +700,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionHead(icon: Icons.person_pin_circle_rounded, title: 'بيانات المريض', color: AppColors.primary),
+                _SectionHead(icon: Icons.person_pin_circle_rounded, title: 'بيانات المريض', color: c.primary),
                 const SizedBox(height: 14),
                 _InfoTile(Icons.person_outline, 'الاسم', order.patientSnapshot?['name'] ?? '-'),
                 _InfoTile(Icons.phone_rounded, 'الهاتف', order.patientSnapshot?['phone'] ?? '-'),
@@ -681,15 +722,15 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionHead(icon: Icons.science_rounded, title: 'الفحوصات', color: AppColors.accent),
+                _SectionHead(icon: Icons.science_rounded, title: 'الفحوصات', color: c.accent),
                 const SizedBox(height: 12),
                 ...order.services.map((s) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(children: [
                     Container(width: 6, height: 6,
-                        decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                        decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle)),
                     const SizedBox(width: 10),
-                    Text(s.nameAr, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                    Text(s.nameAr, style: TextStyle(color: c.textPrimary, fontSize: 14)),
                   ]),
                 )),
               ],
@@ -699,28 +740,28 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
 
           // Action
           if (_isActionLoading)
-            const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            Center(child: CircularProgressIndicator(color: c.primary))
           else ...[
             if (order.status == 'assigned')
-              _ActionBtn(label: 'بدء الرحلة 🚗', color: AppColors.warning,
+              _ActionBtn(label: 'بدء الرحلة 🚗', color: c.warning,
                   onTap: () => _updateStatus('/technician/orders/${order.id}/start-trip', '✅ بدأت الرحلة')),
             if (order.status == 'on_way')
-              _ActionBtn(label: 'وصلت للموقع 📍', color: AppColors.primary,
+              _ActionBtn(label: 'وصلت للموقع 📍', color: c.primary,
                   onTap: () => _updateStatus('/technician/orders/${order.id}/arrived', '✅ تم تسجيل وصولك')),
             if (order.status == 'arrived')
-              _ActionBtn(label: 'بدء الفحص الطبي 🩺', color: AppColors.accent,
+              _ActionBtn(label: 'بدء الفحص الطبي 🩺', color: c.accent,
                   onTap: () => _updateStatus('/technician/orders/${order.id}/start-service', '✅ بدأ الفحص')),
             if (order.status == 'in_progress') ...[
               _GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SectionHead(icon: Icons.upload_file_rounded, title: 'رفع نتائج الفحص', color: AppColors.success),
+                    _SectionHead(icon: Icons.upload_file_rounded, title: 'رفع نتائج الفحص', color: c.success),
                     const SizedBox(height: 14),
                     TextField(
                       controller: _reportNotesController,
                       maxLines: 3,
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                      style: TextStyle(color: c.textPrimary, fontSize: 14),
                       decoration: const InputDecoration(
                         labelText: 'ملاحظات التقرير الطبي',
                         alignLabelWithHint: true,
@@ -736,7 +777,7 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
                 ),
               ),
               const SizedBox(height: 12),
-              _CyanGradientBtn(label: 'تأكيد إكمال الطلب ✅', onTap: _completeOrder),
+              _SolidTealBtn(label: 'تأكيد إكمال الطلب ✅', onTap: _completeOrder, primary: c.primary),
             ],
           ],
           const SizedBox(height: 24),
@@ -749,9 +790,10 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   //  TAB 3
   // ══════════════════════════════════════════════════════
   Widget _buildHistoryTab() {
+    final c = context.colors;
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.surface,
+      color: c.primary,
+      backgroundColor: c.surface,
       onRefresh: _fetchHistory,
       child: _isLoadingHistory
           ? _buildSkeletons()
@@ -771,150 +813,114 @@ class _TechOrdersScreenState extends State<TechOrdersScreen>
   // ══════════════════════════════════════════════════════
   //  HELPERS
   // ══════════════════════════════════════════════════════
-  Widget _buildSkeletons({int count = 3}) => ListView.builder(
-    physics: const AlwaysScrollableScrollPhysics(),
-    padding: const EdgeInsets.all(16),
-    itemCount: count,
-    itemBuilder: (_, __) => Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      height: 110,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+  Widget _buildSkeletons({int count = 3}) {
+    final c = context.colors;
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: count,
+      itemBuilder: (_, __) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        height: 110,
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: c.border),
+        ),
       ),
-    ),
-  );
+    );
+  }
 
-  /// Empty state — wrapped in scrollable so RefreshIndicator always works
-  Widget _buildScrollableEmpty(String title, String sub, IconData icon) =>
-      CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 76, height: 76,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.2),
-                          blurRadius: 20,
-                        )],
-                      ),
-                      child: Icon(icon, color: AppColors.primary, size: 38),
+  /// Empty state
+  Widget _buildScrollableEmpty(String title, String sub, IconData icon) {
+    final c = context.colors;
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 76, height: 76,
+                    decoration: BoxDecoration(
+                      color: c.primaryLight,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [BoxShadow(
+                        color: c.primary.withOpacity(0.12),
+                        blurRadius: 20,
+                      )],
                     ),
-                    const SizedBox(height: 18),
-                    Text(title, style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    Text(sub, style: const TextStyle(
-                        fontSize: 13, color: AppColors.textSecondary, height: 1.7),
-                        textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    const Text('↑ اسحب للأسفل للتحديث',
-                        style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                  ],
-                ),
+                    child: Icon(icon, color: c.primary, size: 38),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(title, style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700,
+                      color: c.textPrimary)),
+                  const SizedBox(height: 6),
+                  Text(sub, style: TextStyle(
+                      fontSize: 13, color: c.textSecondary, height: 1.7),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  Text('↑ اسحب للأسفل للتحديث',
+                      style: TextStyle(fontSize: 11, color: c.textMuted)),
+                ],
               ),
             ),
           ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 
-  /// Error state — wrapped in scrollable so RefreshIndicator always works
-  Widget _buildScrollableError(String msg, VoidCallback retry) =>
-      CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 72, height: 72,
-                      decoration: BoxDecoration(
-                          color: AppColors.errorBg,
-                          borderRadius: BorderRadius.circular(22)),
-                      child: const Icon(Icons.wifi_off_rounded,
-                          color: AppColors.error, size: 36),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(msg,
-                        style: const TextStyle(
-                            fontSize: 14, color: AppColors.textSecondary),
-                        textAlign: TextAlign.center),
-                    const SizedBox(height: 8),
-                    const Text('↑ اسحب للأسفل لإعادة المحاولة',
-                        style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                    const SizedBox(height: 20),
-                    _CyanGradientBtn(label: 'إعادة المحاولة', onTap: retry),
-                  ],
-                ),
+  /// Error state
+  Widget _buildScrollableError(String msg, VoidCallback retry) {
+    final c = context.colors;
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                        color: c.errorBg,
+                        borderRadius: BorderRadius.circular(22)),
+                    child: Icon(Icons.wifi_off_rounded,
+                        color: c.error, size: 36),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(msg,
+                      style: TextStyle(
+                          fontSize: 14, color: c.textSecondary),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('↑ اسحب للأسفل لإعادة المحاولة',
+                      style: TextStyle(fontSize: 11, color: c.textMuted)),
+                  const SizedBox(height: 20),
+                  _SolidTealBtn(label: 'إعادة المحاولة', onTap: retry, primary: c.primary),
+                ],
               ),
             ),
           ),
-        ],
-      );
-
-  Widget _buildEmpty(String title, String sub, IconData icon) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 76, height: 76,
-            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 20)]),
-            child: Icon(icon, color: AppColors.primary, size: 38),
-          ),
-          const SizedBox(height: 18),
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-          const SizedBox(height: 6),
-          Text(sub, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.7),
-              textAlign: TextAlign.center),
-        ],
-      ),
-    ),
-  );
-
-  Widget _buildErrorState(String msg, VoidCallback retry) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 72, height: 72,
-            decoration: BoxDecoration(color: AppColors.errorBg, borderRadius: BorderRadius.circular(22)),
-            child: const Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 36),
-          ),
-          const SizedBox(height: 16),
-          Text(msg, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 20),
-          _CyanGradientBtn(label: 'إعادة المحاولة', onTap: retry),
-        ],
-      ),
-    ),
-  );
+        ),
+      ],
+    );
+  }
 }
 
 // ══════════════════════════════════════════════════════
-//  Available Order Card — Ultra Modern
+//  Available Order Card
 // ══════════════════════════════════════════════════════
 class _AvailableCard extends StatefulWidget {
   final MedicalOrder order;
@@ -935,17 +941,18 @@ class _AvailableCardState extends State<_AvailableCard> {
   bool _pressed = false;
   bool _isExpanded = false;
 
-  Widget _buildDetailRow(IconData icon, String title, String value) {
+  Widget _buildDetailRow(BuildContext context, IconData icon, String title, String value) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 14, color: AppColors.primary),
+          Icon(icon, size: 14, color: c.primary),
           const SizedBox(width: 8),
-          Text('$title: ', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+          Text('$title: ', style: TextStyle(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.bold)),
           Expanded(
-            child: Text(value, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+            child: Text(value, style: TextStyle(fontSize: 12, color: c.textPrimary)),
           ),
         ],
       ),
@@ -980,20 +987,23 @@ class _AvailableCardState extends State<_AvailableCard> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+    final isDark = context.isDark;
+
     return AnimatedScale(
       scale: _pressed ? 0.97 : 1.0,
       duration: const Duration(milliseconds: 120),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.borderCyan),
-          boxShadow: AppColors.cardShadow,
+          border: Border.all(color: c.border),
+          boxShadow: isDark ? [] : c.cardShadow,
         ),
         child: Column(
           children: [
-            // Top (Tap to expand)
+            // Top
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _isExpanded = !_isExpanded),
@@ -1008,7 +1018,7 @@ class _AvailableCardState extends State<_AvailableCard> {
                           Container(
                             width: 40, height: 40,
                             decoration: BoxDecoration(
-                              gradient: AppColors.primaryGradient,
+                              color: c.primary,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 18),
@@ -1021,20 +1031,20 @@ class _AvailableCardState extends State<_AvailableCard> {
                                 Row(
                                   children: [
                                     Text(widget.order.orderNumber,
-                                        style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary,
+                                        style: TextStyle(fontWeight: FontWeight.w700, color: c.primary,
                                             fontFamily: 'Inter', fontSize: 13)),
                                     if (widget.order.schedule?['isEmergency'] == true) ...[
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: AppColors.errorBg,
+                                          color: c.errorBg,
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                                          border: Border.all(color: c.error.withOpacity(0.3)),
                                         ),
-                                        child: const Text(
+                                        child: Text(
                                           'عاجل',
-                                          style: TextStyle(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                          style: TextStyle(color: c.error, fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                                         ),
                                       ),
                                     ],
@@ -1042,7 +1052,7 @@ class _AvailableCardState extends State<_AvailableCard> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(widget.order.services.map((s) => s.nameAr).join(' + '),
-                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                    style: TextStyle(fontSize: 12, color: c.textSecondary),
                                     maxLines: 1, overflow: TextOverflow.ellipsis),
                               ],
                             ),
@@ -1057,17 +1067,17 @@ class _AvailableCardState extends State<_AvailableCard> {
                         Row(
                           children: [
                             Text('${widget.order.pricing?['total'] ?? widget.order.pricing?['servicesTotal']} ج.م',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800,
-                                    color: AppColors.primary, fontFamily: 'Inter')),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800,
+                                    color: c.primary, fontFamily: 'Inter')),
                             const SizedBox(width: 4),
                             Icon(
                               _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                              color: AppColors.textMuted,
+                              color: c.textMuted,
                               size: 18,
                             ),
                           ],
                         ),
-                        const Text('نقداً', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        Text('نقداً', style: TextStyle(fontSize: 11, color: c.textMuted)),
                       ],
                     ),
                   ],
@@ -1081,50 +1091,50 @@ class _AvailableCardState extends State<_AvailableCard> {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                  color: c.surfaceVariant.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: c.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailRow(Icons.person_outline_rounded, 'اسم المريض', widget.order.patientSnapshot?['name'] ?? '-'),
-                    _buildDetailRow(Icons.phone_outlined, 'الهاتف', widget.order.patientSnapshot?['phone'] ?? '-'),
-                    _buildDetailRow(Icons.escalator_warning_outlined, 'بيانات الحالة', 
+                    _buildDetailRow(context, Icons.person_outline_rounded, 'اسم المريض', widget.order.patientSnapshot?['name'] ?? '-'),
+                    _buildDetailRow(context, Icons.phone_outlined, 'الهاتف', widget.order.patientSnapshot?['phone'] ?? '-'),
+                    _buildDetailRow(context, Icons.escalator_warning_outlined, 'بيانات الحالة', 
                         '${widget.order.patientSnapshot?['gender'] == 'male' ? 'ذكر' : 'أنثى'}، ${widget.order.patientSnapshot?['age'] ?? '-'} سنة'),
-                    _buildDetailRow(Icons.hotel_outlined, 'ملازم للفراش', widget.order.caseDetails?['isBedridden'] == true ? 'نعم' : 'لا'),
+                    _buildDetailRow(context, Icons.hotel_outlined, 'ملازم للفراش', widget.order.caseDetails?['isBedridden'] == true ? 'نعم' : 'لا'),
                     if (widget.order.caseDetails?['weight'] != null)
-                      _buildDetailRow(Icons.monitor_weight_outlined, 'الوزن', '${widget.order.caseDetails?['weight']} كجم'),
-                    _buildDetailRow(Icons.layers_outlined, 'الطابق / المصعد', 
+                      _buildDetailRow(context, Icons.monitor_weight_outlined, 'الوزن', '${widget.order.caseDetails?['weight']} كجم'),
+                    _buildDetailRow(context, Icons.layers_outlined, 'الطابق / المصعد', 
                         'الطابق ${widget.order.caseDetails?['floor'] ?? '-'} - ${widget.order.caseDetails?['hasElevator'] == true ? 'يوجد مصعد' : 'لا يوجد مصعد'}'),
-                    _buildDetailRow(Icons.calendar_today_outlined, 'موعد الزيارة', _formatOrderTime(widget.order)),
+                    _buildDetailRow(context, Icons.calendar_today_outlined, 'موعد الزيارة', _formatOrderTime(widget.order)),
                     if (widget.order.caseDetails?['notes']?.toString().isNotEmpty == true)
-                      _buildDetailRow(Icons.description_outlined, 'ملاحظات', widget.order.caseDetails?['notes']),
+                      _buildDetailRow(context, Icons.description_outlined, 'ملاحظات', widget.order.caseDetails?['notes']),
                   ],
                 ),
               ),
             ],
             
             // Divider
-            Container(height: 1, color: AppColors.border, margin: const EdgeInsets.symmetric(horizontal: 16)),
+            Container(height: 1, color: c.border, margin: const EdgeInsets.symmetric(horizontal: 16)),
             
             // Location info
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               child: Row(children: [
-                const Icon(Icons.location_on_rounded, size: 14, color: AppColors.textMuted),
+                Icon(Icons.location_on_rounded, size: 14, color: c.textMuted),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     '${widget.order.location?['district'] ?? '-'} — ${widget.order.location?['street'] ?? '-'}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: c.textSecondary),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ]),
             ),
             
-            // Action Buttons (Accept and Reject side-by-side)
+            // Action Buttons
             Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
@@ -1139,15 +1149,16 @@ class _AvailableCardState extends State<_AvailableCard> {
                       child: Container(
                         height: 48,
                         decoration: BoxDecoration(
-                          gradient: widget.isLoading ? null : AppColors.primaryGradient,
-                          color: widget.isLoading ? AppColors.surfaceVariant : null,
+                          color: widget.isLoading
+                              ? c.primary.withOpacity(0.6)
+                              : _pressed ? c.primary.withOpacity(0.85) : c.primary,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: widget.isLoading ? null : AppColors.cyanGlow,
+                          boxShadow: widget.isLoading ? null : c.primaryGlow,
                         ),
                         child: Center(
                           child: widget.isLoading
                               ? const SizedBox(height: 20, width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                               : const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -1170,17 +1181,17 @@ class _AvailableCardState extends State<_AvailableCard> {
                       child: Container(
                         height: 48,
                         decoration: BoxDecoration(
-                          color: AppColors.errorBg,
+                          color: c.errorBg,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                          border: Border.all(color: c.error.withOpacity(0.3)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.close_rounded, color: AppColors.error, size: 16),
-                            SizedBox(width: 4),
+                            Icon(Icons.close_rounded, color: c.error, size: 16),
+                            const SizedBox(width: 4),
                             Text('رفض',
-                                style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700,
+                                style: TextStyle(color: c.error, fontWeight: FontWeight.w700,
                                     fontFamily: 'Cairo', fontSize: 13)),
                           ],
                         ),
@@ -1205,23 +1216,23 @@ class _HistoryCard extends StatelessWidget {
   const _HistoryCard({required this.order});
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         children: [
           Container(
             width: 46, height: 46,
             decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF06D6A0), Color(0xFF00C6FF)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight),
+                color: c.successBg,
                 borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 22),
+            child: Icon(Icons.check_circle_rounded, color: c.success, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1229,11 +1240,11 @@ class _HistoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(order.orderNumber,
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+                    style: TextStyle(fontWeight: FontWeight.w700, color: c.textPrimary,
                         fontSize: 13, fontFamily: 'Inter')),
                 const SizedBox(height: 3),
                 Text('${order.patientSnapshot?['name']} · ${order.services.map((s) => s.nameAr).join(', ')}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: c.textSecondary),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
@@ -1243,9 +1254,9 @@ class _HistoryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('${order.pricing?['total']} ج.م',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.success,
+                  style: TextStyle(fontWeight: FontWeight.w800, color: c.success,
                       fontSize: 15, fontFamily: 'Inter')),
-              const Text('مكتمل', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+              Text('مكتمل', style: TextStyle(fontSize: 11, color: c.textMuted)),
             ],
           ),
         ],
@@ -1263,40 +1274,47 @@ class _TabItem extends StatelessWidget {
   final bool active;
   const _TabItem({required this.label, required this.count, required this.active});
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Text(label),
-      if (count > 0) ...[
-        const SizedBox(width: 5),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(10),
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(label),
+        if (count > 0) ...[
+          const SizedBox(width: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: c.primaryLight,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text('$count', style: TextStyle(fontSize: 10, color: c.primary, fontWeight: FontWeight.w700)),
           ),
-          child: Text('$count', style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w700)),
-        ),
+        ],
       ],
-    ],
-  );
+    );
+  }
 }
 
 class _GlassCard extends StatelessWidget {
   final Widget child;
   const _GlassCard({required this.child});
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: AppColors.border),
-      boxShadow: AppColors.cardShadow,
-    ),
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final isDark = context.isDark;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.border),
+        boxShadow: isDark ? [] : c.cardShadow,
+      ),
+      child: child,
+    );
+  }
 }
 
 class _SectionHead extends StatelessWidget {
@@ -1305,15 +1323,18 @@ class _SectionHead extends StatelessWidget {
   final Color color;
   const _SectionHead({required this.icon, required this.title, required this.color});
   @override
-  Widget build(BuildContext context) => Row(children: [
-    Container(
-      width: 30, height: 30,
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-      child: Icon(icon, color: color, size: 16),
-    ),
-    const SizedBox(width: 10),
-    Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-  ]);
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Row(children: [
+      Container(
+        width: 30, height: 30,
+        decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+        child: Icon(icon, color: color, size: 16),
+      ),
+      const SizedBox(width: 10),
+      Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary)),
+    ]);
+  }
 }
 
 class _InfoTile extends StatelessWidget {
@@ -1321,19 +1342,22 @@ class _InfoTile extends StatelessWidget {
   final String label, value;
   const _InfoTile(this.icon, this.label, this.value);
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 15, color: AppColors.textMuted),
-        const SizedBox(width: 8),
-        SizedBox(width: 52, child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted))),
-        const SizedBox(width: 6),
-        Expanded(child: Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary))),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: c.textMuted),
+          const SizedBox(width: 8),
+          SizedBox(width: 52, child: Text(label, style: TextStyle(fontSize: 12, color: c.textMuted))),
+          const SizedBox(width: 6),
+          Expanded(child: Text(value, style: TextStyle(fontSize: 13, color: c.textPrimary))),
+        ],
+      ),
+    );
+  }
 }
 
 class _ActionBtn extends StatelessWidget {
@@ -1348,9 +1372,9 @@ class _ActionBtn extends StatelessWidget {
       height: 52,
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: color.withOpacity(0.5), width: 1.5),
       ),
       child: Center(child: Text(label,
           style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w700, fontFamily: 'Cairo'))),
@@ -1358,36 +1382,40 @@ class _ActionBtn extends StatelessWidget {
   );
 }
 
-class _CyanGradientBtn extends StatefulWidget {
+class _SolidTealBtn extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
-  const _CyanGradientBtn({required this.label, required this.onTap});
+  final Color primary;
+  const _SolidTealBtn({required this.label, required this.onTap, required this.primary});
   @override
-  State<_CyanGradientBtn> createState() => _CyanGradientBtnState();
+  State<_SolidTealBtn> createState() => _SolidTealBtnState();
 }
 
-class _CyanGradientBtnState extends State<_CyanGradientBtn> {
+class _SolidTealBtnState extends State<_SolidTealBtn> {
   bool _pressed = false;
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: widget.onTap,
-    onTapDown: (_) => setState(() => _pressed = true),
-    onTapUp: (_) => setState(() => _pressed = false),
-    onTapCancel: () => setState(() => _pressed = false),
-    child: AnimatedScale(
-      scale: _pressed ? 0.97 : 1.0,
-      duration: const Duration(milliseconds: 100),
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppColors.cyanGlow,
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          height: 52,
+          decoration: BoxDecoration(
+            color: _pressed ? widget.primary.withOpacity(0.85) : widget.primary,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: c.primaryGlow,
+          ),
+          child: Center(child: Text(widget.label,
+              style: const TextStyle(color: Colors.white, fontSize: 15,
+                  fontWeight: FontWeight.w800, fontFamily: 'Cairo'))),
         ),
-        child: Center(child: Text(widget.label,
-            style: const TextStyle(color: Colors.white, fontSize: 15,
-                fontWeight: FontWeight.w800, fontFamily: 'Cairo'))),
       ),
-    ),
-  );
+    );
+  }
 }

@@ -98,56 +98,59 @@ class _TechLoginScreenState extends State<TechLoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+    final isDark = context.isDark;
     final size = MediaQuery.of(context).size;
+
     return Scaffold(
+      backgroundColor: c.background,
       body: Stack(
         children: [
-          // ── Animated Background ──────────────────────────
-          Container(
-            decoration: const BoxDecoration(gradient: AppColors.heroGradient),
-          ),
-          // Orb 1 — Cyan
-          AnimatedBuilder(
-            animation: _bgController,
-            builder: (_, __) {
-              final t = _bgController.value * 2 * math.pi;
-              return Positioned(
-                top: size.height * 0.08 + math.sin(t) * 18,
-                right: -60,
-                child: Container(
-                  width: 260, height: 260,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      AppColors.primary.withValues(alpha: 0.25),
-                      AppColors.primary.withValues(alpha: 0.0),
-                    ]),
+          // ── Animated Background Orbs (Only shown in Dark Mode for premium contrast) ──
+          if (isDark) ...[
+            // Orb 1 — Teal
+            AnimatedBuilder(
+              animation: _bgController,
+              builder: (_, __) {
+                final t = _bgController.value * 2 * math.pi;
+                return Positioned(
+                  top: size.height * 0.08 + math.sin(t) * 18,
+                  right: -60,
+                  child: Container(
+                    width: 260, height: 260,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(colors: [
+                        c.primary.withOpacity(0.18),
+                        c.primary.withOpacity(0.0),
+                      ]),
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-          // Orb 2 — Purple
-          AnimatedBuilder(
-            animation: _bgController,
-            builder: (_, __) {
-              final t = _bgController.value * 2 * math.pi + 2;
-              return Positioned(
-                bottom: size.height * 0.12 + math.cos(t) * 15,
-                left: -80,
-                child: Container(
-                  width: 300, height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      AppColors.accent.withValues(alpha: 0.2),
-                      AppColors.accent.withValues(alpha: 0.0),
-                    ]),
+                );
+              },
+            ),
+            // Orb 2 — Darker Accent
+            AnimatedBuilder(
+              animation: _bgController,
+              builder: (_, __) {
+                final t = _bgController.value * 2 * math.pi + 2;
+                return Positioned(
+                  bottom: size.height * 0.12 + math.cos(t) * 15,
+                  left: -80,
+                  child: Container(
+                    width: 300, height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(colors: [
+                        c.accent.withOpacity(0.12),
+                        c.accent.withOpacity(0.0),
+                      ]),
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
+          ],
 
           // ── Content ──────────────────────────────────────
           SafeArea(
@@ -155,159 +158,159 @@ class _TechLoginScreenState extends State<TechLoginScreen>
               opacity: _fadeAnim,
               child: SlideTransition(
                 position: _slideAnim,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 52),
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 24),
 
-                      // ── Brand Pill ─────────────────────────
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: AppColors.borderCyan),
+                        // ── Brand Pill ─────────────────────────
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: c.primaryLight,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: c.primary.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 8, height: 8,
+                                  decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle)),
+                              const SizedBox(width: 8),
+                              Text('بوابة الفني الطبي',
+                                  style: TextStyle(color: c.primary, fontSize: 12, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(width: 8, height: 8,
-                                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
-                            const SizedBox(width: 8),
-                            const Text('بوابة الفني الطبي',
-                                style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // ── Glowing Logo ───────────────────────
-                      Container(
-                        width: 90, height: 90,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          gradient: AppColors.primaryGradient,
-                          boxShadow: AppColors.cyanGlow,
+                        // ── Logo ───────────────────────────────
+                        Container(
+                          width: 80, height: 80,
+                          decoration: BoxDecoration(
+                            color: c.primary,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: c.primaryGlow,
+                          ),
+                          child: const Icon(Icons.medical_services_rounded,
+                              color: Colors.white, size: 40),
                         ),
-                        child: const Icon(Icons.medical_services_rounded,
-                            color: Colors.white, size: 44),
-                      ),
-                      const SizedBox(height: 22),
+                        const SizedBox(height: 20),
 
-                      // ── Title ─────────────────────────────
-                      ShaderMask(
-                        shaderCallback: (b) => AppColors.primaryGradient.createShader(b),
-                        child: const Text('سكان جو',
-                            style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900,
-                                color: Colors.white, letterSpacing: -1)),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text('لوحة تحكم الفني الطبي',
-                          style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                      const SizedBox(height: 44),
+                        // ── Title ──────────────────────────────
+                        Text('سكان جو',
+                            style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800,
+                                color: c.textPrimary, letterSpacing: -0.5)),
+                        const SizedBox(height: 6),
+                        Text('لوحة تحكم الفني الطبي',
+                            style: TextStyle(fontSize: 14, color: c.textSecondary)),
+                        const SizedBox(height: 36),
 
-                      // ── Glass Form Card ────────────────────
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: AppColors.borderCyan),
-                          boxShadow: AppColors.cardShadow,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Error Banner
-                            if (_errorMessage != null) ...[
-                              Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: AppColors.errorBg,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-                                ),
-                                child: Row(children: [
-                                  const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(child: Text(_errorMessage!,
-                                      style: const TextStyle(color: AppColors.error, fontSize: 13, height: 1.4))),
-                                  GestureDetector(
-                                    onTap: () => setState(() => _errorMessage = null),
-                                    child: const Icon(Icons.close_rounded, color: AppColors.error, size: 18),
+                        // ── Form Card ──────────────────────────
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: c.surface,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: c.border),
+                            boxShadow: isDark ? [] : c.cardShadow,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Error Banner
+                              if (_errorMessage != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: c.errorBg,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: c.error.withOpacity(0.3)),
                                   ),
-                                ]),
+                                  child: Row(children: [
+                                    Icon(Icons.error_outline_rounded, color: c.error, size: 20),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: Text(_errorMessage!,
+                                        style: TextStyle(color: c.error, fontSize: 13, height: 1.4))),
+                                    GestureDetector(
+                                      onTap: () => setState(() => _errorMessage = null),
+                                      child: Icon(Icons.close_rounded, color: c.error, size: 18),
+                                    ),
+                                  ]),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+
+                              // Phone
+                              _FieldLabel(text: 'رقم الهاتف', colors: c),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                textDirection: TextDirection.ltr,
+                                textAlign: TextAlign.right,
+                                style: TextStyle(color: c.textPrimary),
+                                decoration: const InputDecoration(
+                                  prefixIcon: Icon(Icons.phone_rounded),
+                                  hintText: '01012345678',
+                                ),
                               ),
                               const SizedBox(height: 20),
-                            ],
 
-                            // Phone
-                            _FieldLabel('رقم الهاتف'),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              textDirection: TextDirection.ltr,
-                              textAlign: TextAlign.right,
-                              style: const TextStyle(color: AppColors.textPrimary),
-                              decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.phone_rounded),
-                                hintText: '01012345678',
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Password
-                            _FieldLabel('كلمة المرور'),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _passwordController,
-                              obscureText: !_passwordVisible,
-                              textDirection: TextDirection.ltr,
-                              style: const TextStyle(color: AppColors.textPrimary),
-                              onSubmitted: (_) => _handleLogin(),
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                hintText: '••••••••',
-                                suffixIcon: IconButton(
-                                  icon: Icon(_passwordVisible
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                      color: AppColors.textMuted, size: 20),
-                                  onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                              // Password
+                              _FieldLabel(text: 'كلمة المرور', colors: c),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _passwordController,
+                                obscureText: !_passwordVisible,
+                                textDirection: TextDirection.ltr,
+                                style: TextStyle(color: c.textPrimary),
+                                onSubmitted: (_) => _handleLogin(),
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                  hintText: '••••••••',
+                                  suffixIcon: IconButton(
+                                    icon: Icon(_passwordVisible
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                        color: c.textMuted, size: 20),
+                                    onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 28),
+                              const SizedBox(height: 28),
 
-                            // Login Button
-                            _CyanButton(label: 'دخول', isLoading: _isLoading, onTap: _handleLogin),
-                          ],
+                              // Login Button
+                              _TealButton(label: 'دخول', isLoading: _isLoading, primary: c.primary, onTap: _handleLogin),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 28),
+                        const SizedBox(height: 24),
 
-                      // Footer
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border),
+                        // Footer
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: c.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: c.border),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.shield_outlined, size: 15, color: c.textMuted),
+                              const SizedBox(width: 8),
+                              Text('للفنيين الطبيين المعتمدين فقط',
+                                  style: TextStyle(fontSize: 12, color: c.textMuted)),
+                            ],
+                          ),
                         ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.shield_outlined, size: 15, color: AppColors.textMuted),
-                            SizedBox(width: 8),
-                            Text('للفنيين الطبيين المعتمدين فقط',
-                                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -322,23 +325,25 @@ class _TechLoginScreenState extends State<TechLoginScreen>
 // ── Field Label ────────────────────────────────────────────────
 class _FieldLabel extends StatelessWidget {
   final String text;
-  const _FieldLabel(this.text);
+  final AppColorTokens colors;
+  const _FieldLabel({required this.text, required this.colors});
   @override
   Widget build(BuildContext context) => Text(text,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary));
+      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.textSecondary));
 }
 
-// ── Cyan Gradient Button ───────────────────────────────────────
-class _CyanButton extends StatefulWidget {
+// ── Teal Solid Button ───────────────────────────────────────────
+class _TealButton extends StatefulWidget {
   final String label;
   final bool isLoading;
+  final Color primary;
   final VoidCallback onTap;
-  const _CyanButton({required this.label, required this.isLoading, required this.onTap});
+  const _TealButton({required this.label, required this.isLoading, required this.primary, required this.onTap});
   @override
-  State<_CyanButton> createState() => _CyanButtonState();
+  State<_TealButton> createState() => _TealButtonState();
 }
 
-class _CyanButtonState extends State<_CyanButton> {
+class _TealButtonState extends State<_TealButton> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) {
@@ -353,15 +358,18 @@ class _CyanButtonState extends State<_CyanButton> {
         child: Container(
           height: 56,
           decoration: BoxDecoration(
-            gradient: widget.isLoading ? null : AppColors.primaryGradient,
-            color: widget.isLoading ? AppColors.surfaceVariant : null,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: widget.isLoading ? null : AppColors.cyanGlow,
+            color: widget.isLoading
+                ? widget.primary.withOpacity(0.6)
+                : _pressed ? widget.primary.withOpacity(0.85) : widget.primary,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: widget.isLoading ? [] : [
+              BoxShadow(color: widget.primary.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4)),
+            ],
           ),
           child: Center(
             child: widget.isLoading
                 ? const SizedBox(height: 22, width: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary))
+                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                 : Text(widget.label,
                     style: const TextStyle(color: Colors.white, fontSize: 17,
                         fontWeight: FontWeight.w800, fontFamily: 'Cairo')),
