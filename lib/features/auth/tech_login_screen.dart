@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:tech_app/core/utils/constants.dart';
 import 'package:tech_app/core/services/storage_service.dart';
+import 'package:tech_app/core/services/notification_service.dart';
 import 'package:tech_app/core/theme/app_colors.dart';
 import 'dart:math' as math;
 
@@ -69,6 +70,10 @@ class _TechLoginScreenState extends State<TechLoginScreen>
         await StorageService.saveRefreshToken(res.data['data']['refreshToken']);
         await StorageService.saveUserRole('technician');
         await StorageService.saveUserData(res.data['data']['technician']);
+        
+        // Register FCM Push token
+        await NotificationService.registerDeviceToken();
+
         if (mounted) context.go('/');
       }
     } on DioException catch (e) {

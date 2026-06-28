@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:tech_app/core/services/notification_service.dart';
 import 'package:tech_app/core/services/storage_service.dart';
 import 'package:tech_app/core/theme/app_theme.dart';
 import 'package:tech_app/core/theme/theme_provider.dart';
@@ -11,6 +13,10 @@ import 'features/orders/tech_orders_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase & notifications
+  await Firebase.initializeApp();
+  await NotificationService.init();
+
   runApp(
     const ProviderScope(
       child: ScanGoTechApp(),
@@ -19,6 +25,7 @@ void main() async {
 }
 
 final GoRouter techRouter = GoRouter(
+  navigatorKey: notificationNavigatorKey,
   initialLocation: '/',
   redirect: (BuildContext context, GoRouterState state) async {
     final token = await StorageService.getAccessToken();

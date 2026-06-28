@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tech_app/core/api/api_client.dart';
 import 'package:tech_app/core/models/order.dart';
 import 'package:tech_app/core/services/storage_service.dart';
+import 'package:tech_app/core/services/notification_service.dart';
 import 'package:tech_app/core/utils/constants.dart';
 import 'package:tech_app/core/theme/app_colors.dart';
 import 'package:tech_app/core/theme/theme_provider.dart';
@@ -53,6 +54,9 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     _bgController = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat();
     _loadUserData();
     _fetchAll();
+    
+    // Register FCM Device Token for notifications
+    NotificationService.registerDeviceToken();
   }
 
   @override
