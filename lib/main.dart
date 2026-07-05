@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,13 +10,18 @@ import 'package:tech_app/core/theme/app_theme.dart';
 import 'package:tech_app/core/theme/theme_provider.dart';
 import 'features/auth/tech_login_screen.dart';
 import 'features/orders/tech_orders_screen.dart';
+import 'features/profile/tech_profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase & notifications
-  await Firebase.initializeApp();
-  await NotificationService.init();
+  // Initialize Firebase & notifications only on native mobile platforms
+  if (!kIsWeb) {
+    await Firebase.initializeApp();
+    await NotificationService.init();
+  } else {
+    debugPrint('Running on Web: Skipping mobile push notifications init.');
+  }
 
   runApp(
     const ProviderScope(
@@ -49,6 +55,10 @@ final GoRouter techRouter = GoRouter(
     GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) => const TechOrdersScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (BuildContext context, GoRouterState state) => const TechProfileScreen(),
     ),
   ],
 );

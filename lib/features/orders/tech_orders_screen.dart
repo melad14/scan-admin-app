@@ -445,6 +445,20 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
           ),
           const SizedBox(width: 8),
 
+          // Profile Button
+          GestureDetector(
+            onTap: () => context.push('/profile'),
+            child: Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.25))),
+              child: const Icon(Icons.person_rounded, color: Colors.white, size: 18),
+            ),
+          ),
+          const SizedBox(width: 8),
+
           GestureDetector(
             onTap: _logout,
             child: Container(

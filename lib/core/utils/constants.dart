@@ -1,7 +1,22 @@
+import 'package:flutter/foundation.dart';
+
 class Constants {
-  // Base API URLs
-  static const String apiBaseUrl = 'https://scan-backend-nine.vercel.app/api/v1';
-  static const String socketUrl = 'https://scan-backend-nine.vercel.app';
+  // Base API URLs dynamically detected
+  static String get _baseUrl {
+    if (kDebugMode) {
+      if (kIsWeb) {
+        return 'http://localhost:3000';
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        return 'http://10.0.2.2:3000'; // android emulator loopback
+      } else {
+        return 'http://localhost:3000'; // iOS simulator / desktop
+      }
+    }
+    return 'https://scan-backend-nine.vercel.app';
+  }
+
+  static String get apiBaseUrl => '$_baseUrl/api/v1';
+  static String get socketUrl => _baseUrl;
 
   // Endpoints
   static const String sendOtp = '/auth/send-otp';
@@ -20,6 +35,9 @@ class Constants {
   static const String techOrdersHistory = '/technician/orders/history';
   static const String techLocation = '/technician/location';
   static const String techAvailability = '/technician/availability';
+
+  // ─── Profile ─────────────────────────────────────────────────────────────────
+  static const String profile = '/profile';
 }
 
 class FeatureFlags {

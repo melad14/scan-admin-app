@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tech_app/core/api/api_client.dart';
@@ -25,10 +26,11 @@ final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
 class NotificationService {
-  static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static FirebaseMessaging get _messaging => FirebaseMessaging.instance;
 
   // ── Init (called once at app startup, after Firebase.initializeApp) ─────────
   static Future<void> init() async {
+    if (kIsWeb) return;
     try {
       // 1. Register background handler FIRST (before any other FCM setup)
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -127,6 +129,7 @@ class NotificationService {
 
   // ── Request permission + register FCM token with backend ────────────────────
   static Future<void> registerDeviceToken() async {
+    if (kIsWeb) return;
     try {
       final settings = await _messaging.requestPermission(
         alert: true,

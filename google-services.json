@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "714160076099",
+    "project_id": "scanapp-c9b27",
+    "storage_bucket": "scanapp-c9b27.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714160076099:android:e6aeb90a3132eaceaaebf6",
+        "android_client_info": {
+          "package_name": "com.example.patient_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZBiQiWZhOxuMViuZOTHgb63G69ML1L6s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714160076099:android:98e3c8ede3f0900daaebf6",
+        "android_client_info": {
+          "package_name": "com.example.tech_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZBiQiWZhOxuMViuZOTHgb63G69ML1L6s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
