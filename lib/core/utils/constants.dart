@@ -2,18 +2,7 @@ import 'package:flutter/foundation.dart';
 
 class Constants {
   // Base API URLs dynamically detected
-  static String get _baseUrl {
-    if (kDebugMode) {
-      if (kIsWeb) {
-        return 'http://localhost:3000';
-      } else if (defaultTargetPlatform == TargetPlatform.android) {
-        return 'http://10.0.2.2:3000'; // android emulator loopback
-      } else {
-        return 'http://localhost:3000'; // iOS simulator / desktop
-      }
-    }
-    return 'https://scan-backend-nine.vercel.app';
-  }
+  static String get _baseUrl => 'https://scan-backend-nine.vercel.app';
 
   static String get apiBaseUrl => '$_baseUrl/api/v1';
   static String get socketUrl => _baseUrl;

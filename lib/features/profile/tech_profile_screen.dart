@@ -104,8 +104,18 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
     final c = context.colors;
     final isDark = context.isDark;
 
-    return Scaffold(
-      backgroundColor: c.background,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          context.go('/');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: c.background,
       body: RefreshIndicator(
         color: c.primary,
         backgroundColor: c.surface,
@@ -127,8 +137,9 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(AppColorTokens c, bool isDark) {
     final name = _profile?['name'] ?? 'الفني';
@@ -154,7 +165,13 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
           Row(
             children: [
               GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
+                onTap: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    context.go('/');
+                  }
+                },
                 child: Container(
                   width: 38, height: 38,
                   decoration: BoxDecoration(
@@ -304,6 +321,52 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
             ),
             _InfoRow(icon: Icons.calendar_today_rounded, label: 'عضو منذ', value: memberSince),
           ]),
+
+          const SizedBox(height: 20),
+
+          // ── Section: Support & Disputes ────────────────────
+          _sectionTitle(c, 'الدعم والاعتراضات الإدارية', Icons.warning_amber_rounded),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: c.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: c.border),
+              boxShadow: isDark ? [] : c.cardShadow,
+            ),
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: () => context.push('/profile/complaints'),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(color: c.primaryLight, borderRadius: BorderRadius.circular(12)),
+                          child: Icon(Icons.notifications_active_rounded, color: c.primary, size: 18),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('شكاوى واعتراضات فريق المركز', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary, fontFamily: 'Cairo')),
+                              const SizedBox(height: 3),
+                              Text('متابعة الشكاوى المرسلة والتنبيهات المحولة من الإدارة', style: TextStyle(fontSize: 11, color: c.textSecondary, fontFamily: 'Cairo')),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded, color: c.textMuted, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           const SizedBox(height: 32),
 

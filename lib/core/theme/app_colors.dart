@@ -226,7 +226,7 @@ class AppColors {
       case 'accepted':      return 'تم القبول';
       case 'assigned':      return 'تم التعيين';
       case 'on_way':        return 'في الطريق';
-      case 'arrived':       return 'وصل الفني';
+      case 'arrived':       return 'وصل فريق المركز';
       case 'in_progress':   return 'جاري الفحص';
       case 'completed':     return 'اكتمل';
       case 'report_ready':  return 'التقرير جاهز';

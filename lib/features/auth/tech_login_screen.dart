@@ -78,7 +78,12 @@ class _TechLoginScreenState extends State<TechLoginScreen>
       }
     } on DioException catch (e) {
       final code = e.response?.statusCode;
-      final msg  = e.response?.data?['message'];
+      String? msg;
+      if (e.response?.data is Map) {
+        msg = e.response?.data['message']?.toString();
+      } else if (e.response?.data is String) {
+        msg = e.response?.data as String;
+      }
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.receiveTimeout) {
@@ -185,7 +190,7 @@ class _TechLoginScreenState extends State<TechLoginScreen>
                               Container(width: 8, height: 8,
                                   decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle)),
                               const SizedBox(width: 8),
-                              Text('بوابة الفني الطبي',
+                              Text('بوابة فريق المركز',
                                   style: TextStyle(color: c.primary, fontSize: 12, fontWeight: FontWeight.w700)),
                             ],
                           ),
@@ -210,7 +215,7 @@ class _TechLoginScreenState extends State<TechLoginScreen>
                             style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800,
                                 color: c.textPrimary, letterSpacing: -0.5)),
                         const SizedBox(height: 6),
-                        Text('لوحة تحكم الفني الطبي',
+                        Text('لوحة تحكم فريق المركز',
                             style: TextStyle(fontSize: 14, color: c.textSecondary)),
                         const SizedBox(height: 36),
 
@@ -308,7 +313,7 @@ class _TechLoginScreenState extends State<TechLoginScreen>
                             children: [
                               Icon(Icons.shield_outlined, size: 15, color: c.textMuted),
                               const SizedBox(width: 8),
-                              Text('للفنيين الطبيين المعتمدين فقط',
+                               Text('لممثلي المركز المعتمدين فقط',
                                   style: TextStyle(fontSize: 12, color: c.textMuted)),
                             ],
                           ),

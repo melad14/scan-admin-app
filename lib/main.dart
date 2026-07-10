@@ -11,6 +11,7 @@ import 'package:tech_app/core/theme/theme_provider.dart';
 import 'features/auth/tech_login_screen.dart';
 import 'features/orders/tech_orders_screen.dart';
 import 'features/profile/tech_profile_screen.dart';
+import 'features/profile/tech_complaints_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,10 @@ final GoRouter techRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (BuildContext context, GoRouterState state) => const TechProfileScreen(),
+    ),
+    GoRoute(
+      path: '/profile/complaints',
+      builder: (BuildContext context, GoRouterState state) => const TechComplaintsScreen(),
     ),
   ],
 );
