@@ -15,6 +15,7 @@ import 'dart:math' as math;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 
 class TechOrdersScreen extends ConsumerStatefulWidget {
   const TechOrdersScreen({super.key});
@@ -46,7 +47,8 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
   String? _activeError;
   String? _historyError;
 
-  final List<String> _uploadedImageUrls = ['https://placehold.co/600x400.png'];
+  final List<String> _uploadedImageUrls = [];
+  bool _isUploadingImages = false;
   final _reportNotesController = TextEditingController();
   final _api = ApiClient();
   
@@ -219,6 +221,63 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
       _showSnack('حدث خطأ. حاول مرة أخرى.', success: false);
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
+  Future<void> _pickAndUploadReportImages() async {
+    if (_isUploadingImages) return;
+
+    final ImagePicker picker = ImagePicker();
+    try {
+      final List<XFile> images = await picker.pickMultiImage(
+        imageQuality: 80,
+      );
+
+      if (images.isEmpty) return;
+
+      setState(() {
+        _isUploadingImages = true;
+      });
+
+      final List<MultipartFile> multipartFiles = [];
+      for (final image in images) {
+        final bytes = await image.readAsBytes();
+        multipartFiles.add(
+          MultipartFile.fromBytes(
+            bytes,
+            filename: image.name,
+          ),
+        );
+      }
+
+      final formData = FormData();
+      for (final file in multipartFiles) {
+        formData.files.add(MapEntry('reportImage', file));
+      }
+
+      final res = await _api.dio.post(
+        '/upload/report-images',
+        data: formData,
+      );
+
+      if (res.statusCode == 200 && res.data['success'] == true) {
+        final List returnedUrls = res.data['data']['urls'] ?? [];
+        setState(() {
+          _uploadedImageUrls.addAll(returnedUrls.map((url) => url.toString()));
+        });
+        _showSnack('تم رفع ${returnedUrls.length} صور بنجاح!', success: true);
+      } else {
+        _showSnack('فشل في رفع بعض أو كل الصور المحددة.', success: false);
+      }
+    } catch (e) {
+      debugPrint('Error picking or uploading report images: $e');
+      _showSnack('حدث خطأ أثناء رفع الصور.', success: false);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImages = false;
+        });
+      }
     }
   }
 
@@ -1224,11 +1283,68 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => _showSnack('✅ تم محاكاة رفع الصور', success: true),
-                      icon: const Icon(Icons.camera_alt_rounded, size: 18),
-                      label: const Text('التقاط/رفع صور الأشعة'),
-                    ),
+                    if (_isUploadingImages)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else
+                      OutlinedButton.icon(
+                        onPressed: _pickAndUploadReportImages,
+                        icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                        label: const Text('التقاط/رفع صور الأشعة'),
+                      ),
+                    if (_uploadedImageUrls.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 90,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _uploadedImageUrls.length,
+                          itemBuilder: (context, index) {
+                            final url = _uploadedImageUrls[index];
+                            return Stack(
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(right: 8, top: 6, left: 2),
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: c.borderLight),
+                                    image: DecorationImage(
+                                      image: NetworkImage(url),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _uploadedImageUrls.removeAt(index);
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                     const Divider(height: 24),
                     _SectionHead(icon: Icons.payments_outlined, title: 'تفاصيل تحصيل الرسوم', color: c.primary),
                     const SizedBox(height: 10),
