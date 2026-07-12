@@ -29,8 +29,8 @@ class _TechLoginScreenState extends State<TechLoginScreen>
 
   final _dio = Dio(BaseOptions(
     baseUrl: Constants.apiBaseUrl,
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 15),
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
   ));
 
   @override
