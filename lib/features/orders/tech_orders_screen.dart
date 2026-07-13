@@ -16,6 +16,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http_parser/http_parser.dart';
 
 class TechOrdersScreen extends ConsumerStatefulWidget {
   const TechOrdersScreen({super.key});
@@ -242,10 +243,22 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
       final List<MultipartFile> multipartFiles = [];
       for (final image in images) {
         final bytes = await image.readAsBytes();
+        
+        final ext = image.name.split('.').last.toLowerCase();
+        MediaType mediaType;
+        if (ext == 'png') {
+          mediaType = MediaType('image', 'png');
+        } else if (ext == 'pdf') {
+          mediaType = MediaType('application', 'pdf');
+        } else {
+          mediaType = MediaType('image', 'jpeg');
+        }
+
         multipartFiles.add(
           MultipartFile.fromBytes(
             bytes,
             filename: image.name,
+            contentType: mediaType,
           ),
         );
       }
@@ -271,7 +284,14 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
       }
     } catch (e) {
       debugPrint('Error picking or uploading report images: $e');
-      _showSnack('حدث خطأ أثناء رفع الصور.', success: false);
+      String msg = 'حدث خطأ أثناء رفع الصور.';
+      if (e is DioException) {
+        final serverMsg = e.response?.data?['message'];
+        if (serverMsg != null && serverMsg.toString().isNotEmpty) {
+          msg = serverMsg.toString();
+        }
+      }
+      _showSnack(msg, success: false);
     } finally {
       if (mounted) {
         setState(() {
