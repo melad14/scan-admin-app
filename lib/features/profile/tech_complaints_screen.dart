@@ -178,6 +178,224 @@ class _TechComplaintsScreenState extends State<TechComplaintsScreen> with Single
     }
   }
 
+  void _showCreateComplaintSheet() {
+    final c = context.colors;
+    String? selectedOrderId;
+    final textController = TextEditingController();
+    bool isSubmitting = false;
+    bool isLoadingOrders = true;
+    List<dynamic> myOrders = [];
+    String? ordersError;
+
+    // Load orders immediately
+    void loadOrders(StateSetter setModalState) async {
+      try {
+        final historyRes = await _api.dio.get('/technician/orders/history');
+        final List historyList = historyRes.data['data'] ?? [];
+
+        final activeRes = await _api.dio.get('/technician/orders/active');
+        final activeOrder = activeRes.data['data'];
+
+        final allOrders = [...historyList];
+        if (activeOrder != null) {
+          allOrders.insert(0, activeOrder);
+        }
+
+        setModalState(() {
+          myOrders = allOrders;
+          isLoadingOrders = false;
+          if (myOrders.isNotEmpty) {
+            selectedOrderId = myOrders.first['_id'];
+          }
+        });
+      } catch (e) {
+        setModalState(() {
+          ordersError = 'فشل تحميل الطلبات الخاصة بك';
+          isLoadingOrders = false;
+        });
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: c.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            if (isLoadingOrders && myOrders.isEmpty && ordersError == null) {
+              loadOrders(setModalState);
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36, height: 4,
+                        decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'تقديم شكوى جديدة للإدارة ✍️',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary, fontFamily: 'Cairo'),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    if (isLoadingOrders)
+                      const Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (ordersError != null)
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(ordersError!, style: TextStyle(color: c.error, fontFamily: 'Cairo', fontSize: 13), textAlign: TextAlign.center),
+                      )
+                    else if (myOrders.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(30),
+                        child: Text(
+                          'لا توجد لديك طلبات نشطة أو منتهية حالياً لتقديم شكوى عليها.',
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.5),
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    else ...[
+                      Text(
+                        'اختر الطلب المتعلق بالشكوى:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: c.textSecondary, fontFamily: 'Cairo'),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: c.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: c.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: selectedOrderId,
+                            isExpanded: true,
+                            dropdownColor: c.surfaceElevated,
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: c.textPrimary),
+                            onChanged: (val) {
+                              setModalState(() => selectedOrderId = val);
+                            },
+                            items: myOrders.map<DropdownMenuItem<String>>((o) {
+                              final orderNum = o['orderNumber'] ?? 'غير معروف';
+                              final patientName = o['patientSnapshot']?['name'] ?? 'مريض غير معروف';
+                              final cat = o['serviceCategory'] ?? '';
+                              final catAr = cat == 'xray' ? 'أشعة' : cat == 'lab' ? 'تحاليل' : 'خدمة طبية';
+                              return DropdownMenuItem<String>(
+                                value: o['_id'] as String,
+                                child: Text('طلب $orderNum - $patientName ($catAr)'),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'تفاصيل وموضوع الشكوى:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: c.textSecondary, fontFamily: 'Cairo'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: textController,
+                        maxLines: 4,
+                        style: TextStyle(fontSize: 13, color: c.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'اكتب تفاصيل الشكوى بوضوح هنا وسيتم مراجعتها واتخاذ اللازم من قبل الإدارة...',
+                          hintStyle: TextStyle(fontSize: 12, color: c.textMuted, fontFamily: 'Cairo'),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      GestureDetector(
+                        onTap: isSubmitting
+                            ? null
+                            : () async {
+                                final text = textController.text.trim();
+                                if (selectedOrderId == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('الرجاء اختيار الطلب أولاً')),
+                                  );
+                                  return;
+                                }
+                                if (text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('الرجاء كتابة تفاصيل الشكوى')),
+                                  );
+                                  return;
+                                }
+
+                                setModalState(() => isSubmitting = true);
+                                try {
+                                  final res = await _api.dio.post('/complaints', data: {
+                                    'orderId': selectedOrderId,
+                                    'text': text,
+                                  });
+                                  if (res.statusCode == 201 && mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('🎉 تم إرسال الشكوى بنجاح وسيتم مراجعتها من قبل الإدارة')),
+                                    );
+                                    Navigator.pop(context);
+                                    _fetchMyComplaints();
+                                  }
+                                } on DioException catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(e.response?.data?['message'] ?? 'فشل إرسال الشكوى')),
+                                    );
+                                  }
+                                } catch (_) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('حدث خطأ غير متوقع')),
+                                    );
+                                  }
+                                } finally {
+                                  setModalState(() => isSubmitting = false);
+                                }
+                              },
+                        child: Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: isSubmitting ? c.primary.withOpacity(0.5) : c.primary,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Center(
+                            child: isSubmitting
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('إرسال الشكوى للإدارة 📤', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontFamily: 'Cairo', fontSize: 14)),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -229,6 +447,12 @@ class _TechComplaintsScreenState extends State<TechComplaintsScreen> with Single
             _buildForwardedTab(c),
             _buildMyComplaintsTab(c),
           ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _showCreateComplaintSheet,
+          backgroundColor: c.primary,
+          label: const Text('تقديم شكوى للإدارة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
+          icon: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );
