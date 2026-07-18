@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 class Constants {
   // Base API URLs dynamically detected
-  static String get _baseUrl => kDebugMode ? 'http://localhost:3000' : 'https://scan-backend-nine.vercel.app';
+  static String get _baseUrl => 'https://scan-backend-nine.vercel.app';
 
   static String get apiBaseUrl => '$_baseUrl/api/v1';
   static String get socketUrl => _baseUrl;
