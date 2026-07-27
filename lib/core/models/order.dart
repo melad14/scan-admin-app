@@ -83,6 +83,8 @@ class MedicalOrder {
   final String? technicianReview;
   final DateTime createdAt;
 
+  String? get technicianArrivalTime => schedule?['technicianArrivalTime']?.toString();
+
   MedicalOrder({
     required this.id,
     required this.orderNumber,

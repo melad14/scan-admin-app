@@ -19,7 +19,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
 
 class TechOrdersScreen extends ConsumerStatefulWidget {
-  const TechOrdersScreen({super.key});
+  final String? highlightOrderId;
+  final String? initialTab;
+  const TechOrdersScreen({super.key, this.highlightOrderId, this.initialTab});
   @override
   ConsumerState<TechOrdersScreen> createState() => _TechOrdersScreenState();
 }
@@ -55,17 +57,27 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
   
   String _paymentStatus = 'completed';
   String _paymentMethod = 'cash';
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    int initialIndex = 0;
+    if (widget.initialTab == 'active') {
+      initialIndex = 1;
+    } else if (widget.initialTab == 'history') {
+      initialIndex = 2;
+    } else if (widget.initialTab == 'available') {
+      initialIndex = 0;
+    }
+    _tabController = TabController(length: 3, vsync: this, initialIndex: initialIndex);
     _bgController = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat();
     _loadUserData();
     _fetchAll();
     
     // Register FCM Device Token for notifications
     NotificationService.registerDeviceToken();
+    _fetchUnreadCount();
   }
 
   @override
@@ -99,7 +111,15 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         final allOrders = list.map((e) => MedicalOrder.fromJson(e)).toList();
         final rejected = await StorageService.getRejectedOrders();
         setState(() {
-          _availableOrders = allOrders.where((order) => !rejected.contains(order.id)).toList();
+          final filtered = allOrders.where((order) => !rejected.contains(order.id)).toList();
+          if (widget.highlightOrderId != null) {
+            final targetIndex = filtered.indexWhere((o) => o.id == widget.highlightOrderId);
+            if (targetIndex != -1) {
+              final targetOrder = filtered.removeAt(targetIndex);
+              filtered.insert(0, targetOrder);
+            }
+          }
+          _availableOrders = filtered;
         });
       }
     } on DioException catch (e) {
@@ -871,7 +891,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     final isDark = context.isDark;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -882,115 +902,123 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         ),
         border: Border(bottom: BorderSide(color: c.border)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Logo
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
-            ),
-            child: const Icon(Icons.medical_services_rounded, color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('سكان جو',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
-                Text('مرحباً، $_techName',
-                    style: const TextStyle(fontSize: 12, color: Color(0xCCFFFFFF))),
-              ],
-            ),
-          ),
-
-          // Duty toggle
-          GestureDetector(
-            onTap: _isDutyLoading ? null : _toggleDuty,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: _isAvailable ? c.successBg : c.surfaceVariant.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                    color: _isAvailable ? c.success : c.border, width: 1.5),
+          // ── Row 1: Logo + Name + Duty Toggle ──
+          Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                ),
+                child: const Icon(Icons.medical_services_rounded, color: Colors.white, size: 20),
               ),
-              child: _isDutyLoading
-                  ? SizedBox(width: 14, height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: c.primary))
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          width: 8, height: 8,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('سكان جو',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                    Text('مرحباً، $_techName',
+                        style: const TextStyle(fontSize: 11, color: Color(0xCCFFFFFF)),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              // Duty toggle
+              GestureDetector(
+                onTap: _isDutyLoading ? null : _toggleDuty,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _isAvailable ? c.successBg : Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                        color: _isAvailable ? c.success : Colors.white.withOpacity(0.3), width: 1.5),
+                  ),
+                  child: _isDutyLoading
+                      ? SizedBox(width: 14, height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: c.primary))
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: 7, height: 7,
+                              decoration: BoxDecoration(
+                                color: _isAvailable ? c.success : Colors.white.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(_isAvailable ? 'نشط' : 'مغلق',
+                                style: TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.w700, fontFamily: 'Cairo',
+                                    color: _isAvailable ? c.success : Colors.white.withOpacity(0.7))),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // ── Row 2: Action Buttons ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _HeaderBtn(icon: isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  onTap: () => ref.read(themeProvider.notifier).toggleTheme()),
+              const SizedBox(width: 8),
+              _HeaderBtn(icon: Icons.person_rounded, onTap: () => context.push('/profile')),
+              const SizedBox(width: 8),
+              // Notifications bell with badge
+              GestureDetector(
+                onTap: () async {
+                  await context.push('/notifications');
+                  _fetchUnreadCount();
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _HeaderBtn(icon: Icons.notifications_rounded, onTap: () async {
+                      await context.push('/notifications');
+                      _fetchUnreadCount();
+                    }),
+                    if (_unreadCount > 0)
+                      Positioned(
+                        top: -3, right: -3,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
-                            color: _isAvailable ? c.success : c.textMuted,
+                            color: Colors.red,
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.2),
+                          ),
+                          constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                          child: Text(
+                            _unreadCount > 9 ? '9+' : '$_unreadCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                        const SizedBox(width: 7),
-                        Text(_isAvailable ? 'نشط' : 'مغلق',
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w700, fontFamily: 'Cairo',
-                                color: _isAvailable ? c.success : c.textMuted)),
-                      ],
-                    ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          
-          // Theme Toggle Button
-          GestureDetector(
-            onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
-            child: Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.25))),
-              child: Icon(
-                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                color: Colors.white,
-                size: 18,
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Profile Button
-          GestureDetector(
-            onTap: () => context.push('/profile'),
-            child: Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.25))),
-              child: const Icon(Icons.person_rounded, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          GestureDetector(
-            onTap: _logout,
-            child: Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.25))),
-              child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
-            ),
+              const SizedBox(width: 8),
+              _HeaderBtn(icon: Icons.logout_rounded, onTap: _logout),
+            ],
           ),
         ],
       ),
     );
   }
+
 
   Widget _buildTabBar() {
     final c = context.colors;
@@ -1039,6 +1067,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                         onAccept: () => _acceptOrder(_availableOrders[i].id),
                         onReject: () => _rejectOrder(_availableOrders[i].id),
                         onPrice: () => _showPricingBottomSheet(_availableOrders[i]),
+                        isHighlighted: widget.highlightOrderId == _availableOrders[i].id,
                       ),
                     ),
     );
@@ -1277,9 +1306,38 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
           if (_isActionLoading)
             Center(child: CircularProgressIndicator(color: c.primary))
           else ...[
-            if (order.status == 'assigned')
-              _ActionBtn(label: 'بدء الرحلة 🚗', color: c.warning,
-                  onTap: () => _updateStatus('/technician/orders/${order.id}/start-trip', '✅ بدأت الرحلة')),
+            if (order.status == 'accepted' || order.status == 'assigned') ...[
+              // Show arrival time row if already set
+              if (order.technicianArrivalTime != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _GlassCard(
+                    child: Row(
+                      children: [
+                        Icon(Icons.access_time_rounded, color: c.primary, size: 18),
+                        const SizedBox(width: 8),
+                        Text('وقت الوصول المحدد: ${order.technicianArrivalTime}',
+                            style: TextStyle(fontSize: 14, color: c.textPrimary, fontFamily: 'Cairo')),
+                      ],
+                    ),
+                  ),
+                ),
+              _ActionBtn(
+                label: order.technicianArrivalTime == null
+                    ? 'تحديد وقت الوصول ⏰'
+                    : 'تعديل وقت الوصول ✏️',
+                color: c.primary,
+                onTap: () => _showArrivalTimeBottomSheet(order),
+              ),
+            ],
+            if (order.status == 'assigned') ...[
+              const SizedBox(height: 10),
+              _ActionBtn(
+                label: 'بدء الرحلة 🚗',
+                color: c.warning,
+                onTap: () => _updateStatus('/technician/orders/${order.id}/start-trip', '✅ بدأت الرحلة'),
+              ),
+            ],
             if (order.status == 'on_way')
               _ActionBtn(label: 'وصلت للموقع 📍', color: c.primary,
                   onTap: () => _updateStatus('/technician/orders/${order.id}/arrived', '✅ تم تسجيل وصولك')),
@@ -1423,6 +1481,246 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
   }
 
   // ══════════════════════════════════════════════════════
+  //  Arrival Time Bottom Sheet
+  // ══════════════════════════════════════════════════════
+  Future<void> _showArrivalTimeBottomSheet(MedicalOrder order) async {
+    final c = context.colors;
+    final isEmergency = order.schedule?['isEmergency'] == true;
+    final slotKey = order.schedule?['timeSlot']?.toString() ?? '';
+
+    String slotSubtitle;
+    TimeOfDay initialTimeOfDay;
+
+    if (isEmergency) {
+      slotSubtitle = 'طلب طارئ ⚡ (يمكن تحديد أي وقت)';
+      initialTimeOfDay = TimeOfDay.now();
+    } else if (slotKey == 'morning_9_12') {
+      slotSubtitle = 'الفترة المحجوزة: 09:00 ص – 12:00 م';
+      initialTimeOfDay = const TimeOfDay(hour: 10, minute: 0);
+    } else if (slotKey == 'afternoon_12_3') {
+      slotSubtitle = 'الفترة المحجوزة: 12:00 م – 03:00 م';
+      initialTimeOfDay = const TimeOfDay(hour: 13, minute: 0);
+    } else if (slotKey == 'evening_3_6') {
+      slotSubtitle = 'الفترة المحجوزة: 03:00 م – 06:00 م';
+      initialTimeOfDay = const TimeOfDay(hour: 16, minute: 0);
+    } else {
+      slotSubtitle = 'اختر الوقت المتوقع للوصول';
+      initialTimeOfDay = TimeOfDay.now();
+    }
+
+    if (order.technicianArrivalTime != null) {
+      final parts = order.technicianArrivalTime!.split(':');
+      if (parts.length == 2) {
+        final h = int.tryParse(parts[0]);
+        final m = int.tryParse(parts[1]);
+        if (h != null && m != null) {
+          initialTimeOfDay = TimeOfDay(hour: h, minute: m);
+        }
+      }
+    }
+
+    TimeOfDay? selectedTime = initialTimeOfDay;
+    String? localError;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            final formattedTimeDisplay = selectedTime == null
+                ? 'لم يتم التحديد بعد'
+                : '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
+                top: 24, left: 24, right: 24,
+              ),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: c.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('تحديد وقت الوصول',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800,
+                          color: c.textPrimary, fontFamily: 'Cairo'),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 6),
+                  Text(slotSubtitle,
+                      style: TextStyle(fontSize: 13, color: c.textMuted, fontFamily: 'Cairo'),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 20),
+                  if (localError != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: c.errorBg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(localError!,
+                          style: TextStyle(color: c.error, fontSize: 13, fontFamily: 'Cairo'),
+                          textAlign: TextAlign.center),
+                    ),
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showTimePicker(
+                        context: modalContext,
+                        initialTime: selectedTime ?? TimeOfDay.now(),
+                      );
+                      if (picked != null) {
+                        setModalState(() {
+                          selectedTime = picked;
+                          localError = null;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: c.surfaceVariant,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: c.primary.withOpacity(0.3), width: 1.5),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('الوقت المحدد:',
+                                  style: TextStyle(fontSize: 12, color: c.textMuted, fontFamily: 'Cairo')),
+                              const SizedBox(height: 4),
+                              Text(formattedTimeDisplay,
+                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,
+                                      color: c.textPrimary, fontFamily: 'Cairo')),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: c.primary,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.schedule, color: Colors.white, size: 16),
+                                SizedBox(width: 6),
+                                Text('تغيير',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold,
+                                        fontSize: 13, fontFamily: 'Cairo')),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: c.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: selectedTime == null
+                        ? null
+                        : () async {
+                            if (!isEmergency) {
+                              final totalMinutes = selectedTime!.hour * 60 + selectedTime!.minute;
+                              int? startMinutes;
+                              int? endMinutes;
+                              String boundsLabel = '';
+                              
+                              if (slotKey == 'morning_9_12') {
+                                startMinutes = 9 * 60;
+                                endMinutes = 12 * 60;
+                                boundsLabel = '09:00 ص – 12:00 م';
+                              } else if (slotKey == 'afternoon_12_3') {
+                                startMinutes = 12 * 60;
+                                endMinutes = 15 * 60;
+                                boundsLabel = '12:00 م – 03:00 م';
+                              } else if (slotKey == 'evening_3_6') {
+                                startMinutes = 15 * 60;
+                                endMinutes = 18 * 60;
+                                boundsLabel = '03:00 م – 06:00 م';
+                              }
+                              
+                              if (startMinutes != null && endMinutes != null) {
+                                if (totalMinutes < startMinutes || totalMinutes > endMinutes) {
+                                  setModalState(() {
+                                    localError = 'وقت الوصول يجب أن يكون ضمن الفترة المحجوزة للطلب ($boundsLabel)';
+                                  });
+                                  return;
+                                }
+                              }
+                            }
+
+                            final time24 =
+                                '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+                            try {
+                              final res = await _api.dio.put(
+                                '${Constants.techOrders}/${order.id}/set-arrival-time',
+                                data: {'arrivalTime': time24},
+                              );
+                              if (res.statusCode == 200 && res.data['success'] == true) {
+                                if (mounted) {
+                                  Navigator.pop(ctx);
+                                  _showSnack('✅ تم تحديد وقت الوصول بنجاح!', success: true);
+                                  await _fetchActiveOrder();
+                                }
+                              }
+                            } on DioException catch (e) {
+                              final serverMsg = e.response?.data?['message']?.toString();
+                              setModalState(() {
+                                localError = serverMsg ?? 'فشل تحديد وقت الوصول. حاول مرة أخرى.';
+                              });
+                            } catch (_) {
+                              setModalState(() {
+                                localError = 'حدث خطأ غير متوقع.';
+                              });
+                            }
+                          },
+                    child: const Text('تأكيد وحفظ وقت الوصول',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final res = await _api.dio.get(Constants.techNotifications);
+      if (res.statusCode == 200 && mounted) {
+        final notifications = res.data['notifications'] as List? ?? [];
+        final count = notifications.where((n) => n['isRead'] == false).length;
+        setState(() => _unreadCount = count);
+      }
+    } catch (_) {}
+  }
+
+  // ══════════════════════════════════════════════════════
   //  TAB 3
   // ══════════════════════════════════════════════════════
   Widget _buildHistoryTab() {
@@ -1514,12 +1812,14 @@ class _AvailableCard extends StatefulWidget {
   final VoidCallback onAccept;
   final VoidCallback onReject;
   final VoidCallback onPrice;
+  final bool isHighlighted;
   const _AvailableCard({
     required this.order,
     required this.isLoading,
     required this.onAccept,
     required this.onReject,
     required this.onPrice,
+    this.isHighlighted = false,
   });
   @override
   State<_AvailableCard> createState() => _AvailableCardState();
@@ -1528,6 +1828,14 @@ class _AvailableCard extends StatefulWidget {
 class _AvailableCardState extends State<_AvailableCard> {
   bool _pressed = false;
   bool _isExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isHighlighted) {
+      _isExpanded = true;
+    }
+  }
 
   Widget _buildDetailRow(BuildContext context, IconData icon, String title, String value) {
     final c = context.colors;
@@ -1586,8 +1894,13 @@ class _AvailableCardState extends State<_AvailableCard> {
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: c.border),
-          boxShadow: isDark ? [] : c.cardShadow,
+          border: Border.all(
+            color: widget.isHighlighted ? c.primary : c.border,
+            width: widget.isHighlighted ? 2.0 : 1.0,
+          ),
+          boxShadow: widget.isHighlighted
+              ? [BoxShadow(color: c.primary.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)]
+              : (isDark ? [] : c.cardShadow),
         ),
         child: Column(
           children: [
@@ -2058,4 +2371,24 @@ class _SolidTealBtnState extends State<_SolidTealBtn> {
       ),
     );
   }
+}
+
+// Small icon button used in the header
+class _HeaderBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderBtn({required this.icon, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 34, height: 34,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withOpacity(0.25)),
+      ),
+      child: Icon(icon, color: Colors.white, size: 17),
+    ),
+  );
 }

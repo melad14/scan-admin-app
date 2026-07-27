@@ -78,7 +78,10 @@ class NotificationService {
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         // Tapped a foreground local notification → navigate
         if (response.payload != null && response.payload!.isNotEmpty) {
-          _handleNotificationTap({'orderId': response.payload, 'type': 'local'});
+          final parts = response.payload!.split('|');
+          final type = parts.isNotEmpty ? parts[0] : '';
+          final orderId = parts.length > 1 ? parts[1] : response.payload!;
+          _handleNotificationTap({'orderId': orderId, 'type': type});
         }
       },
     );
@@ -96,6 +99,7 @@ class NotificationService {
     if (notification == null) return;
 
     final orderId = message.data['orderId'] ?? '';
+    final type = message.data['type'] ?? '';
 
     _localNotifications.show(
       id: message.messageId.hashCode,
@@ -113,18 +117,46 @@ class NotificationService {
           enableVibration: true,
         ),
       ),
-      payload: orderId,
+      payload: '$type|$orderId',
     );
   }
 
+  static bool _isNavigating = false;
+
   // ── Navigate to the relevant screen based on notification data ──────────────
   static void _handleNotificationTap(Map<String, dynamic> data) {
+    if (_isNavigating) return;
+    _isNavigating = true;
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      _isNavigating = false;
+    });
+
     final context = notificationNavigatorKey.currentContext;
     if (context == null) return;
 
-    // Tech app has only one main screen (orders screen at '/').
-    // Always navigate to '/' so the tech can see the relevant order.
-    GoRouter.of(context).go('/');
+    final type = data['type']?.toString() ?? '';
+    final orderId = data['orderId']?.toString() ?? '';
+
+    if (type == 'new_complaint') {
+      GoRouter.of(context).push('/profile/complaints');
+    } else if (type == 'new_order') {
+      final query = orderId.isNotEmpty
+          ? '?orderId=$orderId&tab=available&t=${DateTime.now().millisecondsSinceEpoch}'
+          : '?tab=available&t=${DateTime.now().millisecondsSinceEpoch}';
+      GoRouter.of(context).go('/$query');
+    } else if (type == 'order_assigned' || type == 'order_cancelled') {
+      final query = orderId.isNotEmpty
+          ? '?orderId=$orderId&tab=active&t=${DateTime.now().millisecondsSinceEpoch}'
+          : '?tab=active&t=${DateTime.now().millisecondsSinceEpoch}';
+      GoRouter.of(context).go('/$query');
+    } else {
+      if (orderId.isNotEmpty) {
+        final query = '?orderId=$orderId&tab=active&t=${DateTime.now().millisecondsSinceEpoch}';
+        GoRouter.of(context).go('/$query');
+      } else {
+        GoRouter.of(context).go('/');
+      }
+    }
   }
 
   // ── Request permission + register FCM token with backend ────────────────────

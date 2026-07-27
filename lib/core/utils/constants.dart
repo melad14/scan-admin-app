@@ -19,11 +19,14 @@ class Constants {
   static const String orders = '/orders';
   static const String ordersHistory = '/orders/history';
   
+  static const String techOrders = '/technician/orders';
   static const String techAvailableOrders = '/technician/orders/available';
   static const String techActiveOrder = '/technician/orders/active';
   static const String techOrdersHistory = '/technician/orders/history';
   static const String techLocation = '/technician/location';
   static const String techAvailability = '/technician/availability';
+  static const String techNotifications = '/technician/notifications';
+  static const String techNotificationsReadAll = '/technician/notifications/read-all';
 
   // ─── Profile ─────────────────────────────────────────────────────────────────
   static const String profile = '/profile';

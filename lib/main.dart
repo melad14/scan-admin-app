@@ -12,6 +12,7 @@ import 'features/auth/tech_login_screen.dart';
 import 'features/orders/tech_orders_screen.dart';
 import 'features/profile/tech_profile_screen.dart';
 import 'features/profile/tech_complaints_screen.dart';
+import 'features/notifications/tech_notifications_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,7 +56,16 @@ final GoRouter techRouter = GoRouter(
     ),
     GoRoute(
       path: '/',
-      builder: (BuildContext context, GoRouterState state) => const TechOrdersScreen(),
+      builder: (BuildContext context, GoRouterState state) {
+        final orderId = state.uri.queryParameters['orderId'];
+        final tab = state.uri.queryParameters['tab'];
+        final t = state.uri.queryParameters['t'];
+        return TechOrdersScreen(
+          key: ValueKey('tech_orders_${orderId}_${tab}_$t'),
+          highlightOrderId: orderId,
+          initialTab: tab,
+        );
+      },
     ),
     GoRoute(
       path: '/profile',
@@ -64,6 +74,10 @@ final GoRouter techRouter = GoRouter(
     GoRoute(
       path: '/profile/complaints',
       builder: (BuildContext context, GoRouterState state) => const TechComplaintsScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (BuildContext context, GoRouterState state) => const TechNotificationsScreen(),
     ),
   ],
 );
