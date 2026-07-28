@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tech_app/core/api/api_client.dart';
 import 'package:tech_app/core/theme/app_colors.dart';
 import 'package:tech_app/core/theme/ui_components.dart';
+import 'package:tech_app/core/utils/app_snackbar.dart';
 import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -110,19 +111,13 @@ class _TechComplaintsScreenState extends State<TechComplaintsScreen> with Single
     try {
       final res = await _api.dio.patch('/complaints/$id/resolve');
       if (res.statusCode == 200 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ تم حل الشكوى وتسوية النزاع بنجاح')),
-        );
+        AppSnackBar.show(context, message: 'تم حل الشكوى وتسوية النزاع بنجاح', type: SnackType.success);
         _fetchForwardedComplaints();
       }
     } on DioException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.response?.data?['message'] ?? 'فشل تحديث الشكوى')),
-      );
+      if (mounted) AppSnackBar.show(context, message: e.response?.data?['message'] ?? 'فشل تحديث الشكوى', type: SnackType.error);
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('حدث خطأ غير متوقع')),
-      );
+      if (mounted) AppSnackBar.show(context, message: 'حدث خطأ غير متوقع', type: SnackType.error);
     }
   }
 
@@ -132,9 +127,7 @@ class _TechComplaintsScreenState extends State<TechComplaintsScreen> with Single
       await launchUrl(uri);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر فتح تطبيق الاتصال')),
-        );
+        AppSnackBar.show(context, message: 'تعذر فتح تطبيق الاتصال', type: SnackType.error);
       }
     }
   }
@@ -330,15 +323,11 @@ class _TechComplaintsScreenState extends State<TechComplaintsScreen> with Single
                             : () async {
                                 final text = textController.text.trim();
                                 if (selectedOrderId == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('الرجاء اختيار الطلب أولاً')),
-                                  );
+                                  AppSnackBar.show(context, message: 'الرجاء اختيار الطلب أولاً', type: SnackType.warning);
                                   return;
                                 }
                                 if (text.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('الرجاء كتابة تفاصيل الشكوى')),
-                                  );
+                                  AppSnackBar.show(context, message: 'الرجاء كتابة تفاصيل الشكوى', type: SnackType.warning);
                                   return;
                                 }
 
@@ -349,23 +338,17 @@ class _TechComplaintsScreenState extends State<TechComplaintsScreen> with Single
                                     'text': text,
                                   });
                                   if (res.statusCode == 201 && mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('🎉 تم إرسال الشكوى بنجاح وسيتم مراجعتها من قبل الإدارة')),
-                                    );
+                                    AppSnackBar.show(context, message: 'تم إرسال الشكوى بنجاح وسيتم مراجعتها من قبل الإدارة', type: SnackType.success);
                                     Navigator.pop(context);
                                     _fetchMyComplaints();
                                   }
                                 } on DioException catch (e) {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(e.response?.data?['message'] ?? 'فشل إرسال الشكوى')),
-                                    );
+                                    AppSnackBar.show(context, message: e.response?.data?['message'] ?? 'فشل إرسال الشكوى', type: SnackType.error);
                                   }
                                 } catch (_) {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('حدث خطأ غير متوقع')),
-                                    );
+                                    AppSnackBar.show(context, message: 'حدث خطأ غير متوقع', type: SnackType.error);
                                   }
                                 } finally {
                                   setModalState(() => isSubmitting = false);

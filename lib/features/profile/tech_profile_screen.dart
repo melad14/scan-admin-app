@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tech_app/core/api/api_client.dart';
 import 'package:tech_app/core/services/storage_service.dart';
 import 'package:tech_app/core/utils/constants.dart';
+import 'package:tech_app/core/utils/loading_overlay.dart';
 import 'package:tech_app/core/theme/app_colors.dart';
 import 'package:tech_app/core/theme/theme_provider.dart';
 import 'package:dio/dio.dart';
@@ -19,6 +20,7 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
   final _api = ApiClient();
   Map<String, dynamic>? _profile;
   bool _isLoading = true;
+  bool _isLoggingOut = false;
   String? _error;
 
   @override
@@ -93,6 +95,7 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
       ),
     );
     if (ok == true) {
+      setState(() => _isLoggingOut = true);
       try { await _api.dio.post(Constants.logout); } catch (_) {}
       await StorageService.clearAll();
       if (mounted) context.go('/login');
@@ -114,32 +117,36 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
           context.go('/');
         }
       },
-      child: Scaffold(
-        backgroundColor: c.background,
-      body: RefreshIndicator(
-        color: c.primary,
-        backgroundColor: c.surface,
-        onRefresh: _fetchProfile,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // ── Header ──────────────────────────────────────────
-            SliverToBoxAdapter(child: _buildHeader(c, isDark)),
+      child: LoadingOverlay(
+        isVisible: _isLoggingOut,
+        message: 'جاري تسجيل الخروج...',
+        child: Scaffold(
+          backgroundColor: c.background,
+          body: RefreshIndicator(
+            color: c.primary,
+            backgroundColor: c.surface,
+            onRefresh: _fetchProfile,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Header ──────────────────────────────────────────
+                SliverToBoxAdapter(child: _buildHeader(c, isDark)),
 
-            // ── Content ─────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: _isLoading
-                  ? _buildLoadingState(c)
-                  : _error != null
-                      ? _buildErrorState(c)
-                      : _buildProfileContent(c, isDark),
+                // ── Content ─────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: _isLoading
+                      ? _buildLoadingState(c)
+                      : _error != null
+                          ? _buildErrorState(c)
+                          : _buildProfileContent(c, isDark),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildHeader(AppColorTokens c, bool isDark) {
     final name = _profile?['name'] ?? 'الفني';

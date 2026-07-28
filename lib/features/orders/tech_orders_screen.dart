@@ -7,6 +7,8 @@ import 'package:tech_app/core/models/order.dart';
 import 'package:tech_app/core/services/storage_service.dart';
 import 'package:tech_app/core/services/notification_service.dart';
 import 'package:tech_app/core/utils/constants.dart';
+import 'package:tech_app/core/utils/app_snackbar.dart';
+import 'package:tech_app/core/utils/loading_overlay.dart';
 import 'package:tech_app/core/theme/app_colors.dart';
 import 'package:tech_app/core/theme/theme_provider.dart';
 import 'package:tech_app/core/theme/ui_components.dart';
@@ -38,12 +40,15 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
   List<MedicalOrder> _availableOrders = [];
   MedicalOrder? _activeOrder;
   List<MedicalOrder> _historyOrders = [];
+  List<MedicalOrder> _rejectedOrders = [];
 
   List<dynamic> _allServices = [];
   bool _isLoadingAvailable = false;
   bool _isLoadingActive = false;
   bool _isLoadingHistory = false;
+  bool _isLoadingRejected = false;
   bool _isActionLoading = false;
+  bool _isLoggingOut = false;
   String? _loadingOrderId;
 
   String? _availableError;
@@ -70,7 +75,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     } else if (widget.initialTab == 'available') {
       initialIndex = 0;
     }
-    _tabController = TabController(length: 3, vsync: this, initialIndex: initialIndex);
+    _tabController = TabController(length: 4, vsync: this, initialIndex: initialIndex);
     _bgController = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat();
     _loadUserData();
     _fetchAll();
@@ -100,6 +105,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     _fetchAvailableOrders();
     _fetchActiveOrder();
     _fetchHistory();
+    _fetchRejectedOrders();
   }
 
   Future<void> _fetchAvailableOrders() async {
@@ -132,11 +138,99 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
   }
 
   Future<void> _rejectOrder(String orderId) async {
+    final c = context.colors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: c.errorBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.block_rounded, color: c.error, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('تأكيد رفض الطلب',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 17)),
+            ),
+          ],
+        ),
+        content: const Text(
+          'هل أنت متأكد من رفض هذا الطلب؟\nسيتم نقله إلى قائمة الطلبات المرفوضة ويمكنك الرجوع إليه لاحقاً.',
+          style: TextStyle(fontFamily: 'Cairo', fontSize: 14, height: 1.6),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('تراجع', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c.error,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('نعم، ارفض', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     await StorageService.rejectOrder(orderId);
     setState(() {
       _availableOrders.removeWhere((order) => order.id == orderId);
     });
-    _showSnack('❌ تم رفض وإخفاء الطلب بنجاح.', success: false);
+    if (mounted) AppSnackBar.show(context, message: 'تم رفض وإخفاء الطلب بنجاح', type: SnackType.info);
+    _fetchRejectedOrders();
+  }
+
+  Future<void> _fetchRejectedOrders() async {
+    setState(() => _isLoadingRejected = true);
+    try {
+      final rejectedIds = await StorageService.getRejectedOrders();
+      if (rejectedIds.isEmpty) {
+        if (mounted) setState(() => _rejectedOrders = []);
+        return;
+      }
+      final res = await _api.dio.get(Constants.techAvailableOrders);
+      if (res.statusCode == 200 && mounted) {
+        final List list = res.data['data'] ?? [];
+        final allOrders = list.map((e) => MedicalOrder.fromJson(e)).toList();
+        setState(() {
+          _rejectedOrders = allOrders.where((o) => rejectedIds.contains(o.id)).toList();
+        });
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _isLoadingRejected = false);
+    }
+  }
+
+  Future<void> _undoRejectOrder(String orderId) async {
+    await StorageService.undoRejectOrder(orderId);
+    await _fetchRejectedOrders();
+    await _fetchAvailableOrders();
+    if (mounted) AppSnackBar.show(context, message: 'تم استعادة الطلب بنجاح', type: SnackType.success);
   }
 
   Future<void> _fetchActiveOrder() async {
@@ -187,12 +281,12 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         setState(() => _isAvailable = v);
         final d = await StorageService.getUserData();
         if (d != null) { d['isAvailable'] = v; await StorageService.saveUserData(d); }
-        _showSnack(v ? '✅ أنت الآن نشط ومتاح' : '⏸️ تم إيقاف الاستقبال', success: v);
+        AppSnackBar.show(context, message: v ? 'أنت الآن نشط ومتاح' : 'تم إيقاف الاستقبال', type: v ? SnackType.success : SnackType.info);
       }
     } on DioException catch (e) {
-      _showSnack(_parseError(e), success: false);
+      AppSnackBar.show(context, message: _parseError(e), type: SnackType.error);
     } catch (_) {
-      _showSnack('فشل تغيير الحالة.', success: false);
+      AppSnackBar.show(context, message: 'فشل تغيير الحالة.', type: SnackType.error);
     } finally {
       if (mounted) setState(() => _isDutyLoading = false);
     }
@@ -206,7 +300,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     try {
       final res = await _api.dio.put('/technician/orders/$orderId/accept');
       if (res.statusCode == 200 && mounted) {
-        _showSnack('✅ تم قبول الطلب بنجاح!', success: true);
+        AppSnackBar.show(context, message: 'تم قبول الطلب بنجاح!', type: SnackType.success);
         // Remove the accepted order from the available list locally (no reload spinner)
         setState(() {
           _availableOrders.removeWhere((o) => o.id == orderId);
@@ -215,9 +309,9 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         _tabController.animateTo(1);
       }
     } on DioException catch (e) {
-      _showSnack(e.response?.data?['message'] ?? 'فشل القبول. ربما أُعطي لفني آخر.', success: false);
+      AppSnackBar.show(context, message: e.response?.data?['message'] ?? 'فشل القبول. ربما أُعطي لفني آخر.', type: SnackType.error);
     } catch (_) {
-      _showSnack('حدث خطأ. حاول مرة أخرى.', success: false);
+      AppSnackBar.show(context, message: 'حدث خطأ. حاول مرة أخرى.', type: SnackType.error);
     } finally {
       if (mounted) {
         setState(() {
@@ -233,13 +327,13 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     try {
       final res = await _api.dio.put(endpoint);
       if (res.statusCode == 200 && mounted) {
-        _showSnack(msg, success: true);
+        AppSnackBar.show(context, message: msg, type: SnackType.success);
         await _fetchActiveOrder();
       }
     } on DioException catch (e) {
-      _showSnack(e.response?.data?['message'] ?? 'فشل تحديث الحالة.', success: false);
+      AppSnackBar.show(context, message: e.response?.data?['message'] ?? 'فشل تحديث الحالة.', type: SnackType.error);
     } catch (_) {
-      _showSnack('حدث خطأ. حاول مرة أخرى.', success: false);
+      AppSnackBar.show(context, message: 'حدث خطأ. حاول مرة أخرى.', type: SnackType.error);
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
     }
@@ -298,9 +392,9 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         setState(() {
           _uploadedImageUrls.addAll(returnedUrls.map((url) => url.toString()));
         });
-        _showSnack('تم رفع ${returnedUrls.length} صور بنجاح!', success: true);
+        AppSnackBar.show(context, message: 'تم رفع ${returnedUrls.length} صور بنجاح!', type: SnackType.success);
       } else {
-        _showSnack('فشل في رفع بعض أو كل الصور المحددة.', success: false);
+        AppSnackBar.show(context, message: 'فشل في رفع بعض أو كل الصور المحددة.', type: SnackType.error);
       }
     } catch (e) {
       debugPrint('Error picking or uploading report images: $e');
@@ -311,7 +405,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
           msg = serverMsg.toString();
         }
       }
-      _showSnack(msg, success: false);
+      AppSnackBar.show(context, message: msg, type: SnackType.error);
     } finally {
       if (mounted) {
         setState(() {
@@ -322,7 +416,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
   }
 
   Future<void> _completeOrder() async {
-    if (_uploadedImageUrls.isEmpty) { _showSnack('يرجى إرفاق صورة فحص واحدة على الأقل', success: false); return; }
+    if (_uploadedImageUrls.isEmpty) { AppSnackBar.show(context, message: 'يرجى إرفاق صورة فحص واحدة على الأقل', type: SnackType.warning); return; }
     setState(() => _isActionLoading = true);
     try {
       final res = await _api.dio.post('/technician/orders/${_activeOrder!.id}/upload-report', data: {
@@ -334,7 +428,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
       });
       if (res.statusCode == 200 && mounted) {
         final orderId = _activeOrder!.id;
-        _showSnack('🎉 تم رفع التقرير وإتمام الطلب!', success: true);
+        AppSnackBar.show(context, message: 'تم رفع التقرير وإتمام الطلب!', type: SnackType.success);
         await _fetchActiveOrder();
         await _fetchHistory();
         if (mounted) {
@@ -342,9 +436,9 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         }
       }
     } on DioException catch (e) {
-      _showSnack(e.response?.data?['message'] ?? 'فشل إتمام الطلب.', success: false);
+      AppSnackBar.show(context, message: e.response?.data?['message'] ?? 'فشل إتمام الطلب.', type: SnackType.error);
     } catch (_) {
-      _showSnack('حدث خطأ. حاول مرة أخرى.', success: false);
+      AppSnackBar.show(context, message: 'حدث خطأ. حاول مرة أخرى.', type: SnackType.error);
     } finally {
       if (mounted) setState(() => _isActionLoading = false);
     }
@@ -508,30 +602,11 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
       ),
     );
     if (ok == true) {
+      setState(() => _isLoggingOut = true);
       try { await _api.dio.post(Constants.logout); } catch (_) {}
       await StorageService.clearAll();
       if (mounted) context.go('/login');
     }
-  }
-
-  void _showSnack(String msg, {required bool success}) {
-    if (!mounted) return;
-    final c = context.colors;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-        msg,
-        style: TextStyle(
-          fontFamily: 'Cairo',
-          color: success ? c.success : c.error,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
-      ),
-      backgroundColor: success ? c.successBg : c.errorBg,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      duration: const Duration(seconds: 3),
-    ));
   }
 
   Future<void> _fetchServicesList() async {
@@ -566,7 +641,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     }
     
     if (_allServices.isEmpty) {
-      _showSnack('عذراً، فشل تحميل قائمة الخدمات الطبية.', success: false);
+      AppSnackBar.show(context, message: 'عذراً، فشل تحميل قائمة الخدمات الطبية.', type: SnackType.error);
       return;
     }
 
@@ -807,13 +882,13 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         },
       );
       if (res.statusCode == 200 && res.data['success'] == true) {
-        _showSnack('🎉 تم حفظ التسعير وتحديث الطلب بنجاح!', success: true);
+        AppSnackBar.show(context, message: 'تم حفظ التسعير وتحديث الطلب بنجاح!', type: SnackType.success);
         _fetchAvailableOrders();
       }
     } on DioException catch (e) {
-      _showSnack(e.response?.data?['message'] ?? 'فشل تسعير الطلب.', success: false);
+      AppSnackBar.show(context, message: e.response?.data?['message'] ?? 'فشل تسعير الطلب.', type: SnackType.error);
     } catch (_) {
-      _showSnack('حدث خطأ أثناء إرسال التسعير.', success: false);
+      AppSnackBar.show(context, message: 'حدث خطأ أثناء إرسال التسعير.', type: SnackType.error);
     } finally {
       if (mounted) {
         setState(() {
@@ -835,49 +910,54 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
       ),
-      child: Scaffold(
-        backgroundColor: c.background,
-        body: Stack(
-          children: [
-            // Animated background orb
-            AnimatedBuilder(
-              animation: _bgController,
-              builder: (_, __) {
-                final t = _bgController.value * 2 * math.pi;
-                return Positioned(
-                  top: -60 + math.sin(t) * 20,
-                  right: -80 + math.cos(t) * 15,
-                  child: Container(
-                    width: 220, height: 220,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        c.primary.withOpacity(isDark ? 0.12 : 0.04),
-                        c.primary.withOpacity(0.0),
-                      ]),
+      child: LoadingOverlay(
+        isVisible: _isLoggingOut,
+        message: 'جاري تسجيل الخروج...',
+        child: Scaffold(
+          backgroundColor: c.background,
+          body: Stack(
+            children: [
+              // Animated background orb
+              AnimatedBuilder(
+                animation: _bgController,
+                builder: (_, __) {
+                  final t = _bgController.value * 2 * math.pi;
+                  return Positioned(
+                    top: -60 + math.sin(t) * 20,
+                    right: -80 + math.cos(t) * 15,
+                    child: Container(
+                      width: 220, height: 220,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(colors: [
+                          c.primary.withOpacity(isDark ? 0.12 : 0.04),
+                          c.primary.withOpacity(0.0),
+                        ]),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              Column(
+                children: [
+                  _buildHeader(),
+                  _buildTabBar(),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildAvailableTab(),
+                        _buildActiveTab(),
+                        _buildHistoryTab(),
+                        _buildRejectedTab(),
+                      ],
                     ),
                   ),
-                );
-              },
-            ),
-
-            Column(
-              children: [
-                _buildHeader(),
-                _buildTabBar(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildAvailableTab(),
-                      _buildActiveTab(),
-                      _buildHistoryTab(),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1037,6 +1117,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
           Tab(child: _TabItem(label: 'المتاحة', count: _availableOrders.length, active: false)),
           const Tab(text: 'النشط'),
           Tab(child: _TabItem(label: 'السجل', count: _historyOrders.length, active: false)),
+          Tab(child: _TabItem(label: 'المرفوضة', count: _rejectedOrders.length, active: false)),
         ],
       ),
     );
@@ -1176,13 +1257,13 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                 } else if (await canLaunchUrl(googleMapsUrl)) {
                   await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
                 } else {
-                  _showSnack('تعذر فتح الخرائط. لا توجد تطبيقات خرائط مثبتة.', success: false);
+                  AppSnackBar.show(context, message: 'تعذر فتح الخرائط. لا توجد تطبيقات خرائط مثبتة.', type: SnackType.warning);
                 }
               } catch (e) {
                 try {
                   await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
                 } catch (_) {
-                  _showSnack('حدث خطأ أثناء محاولة فتح الخرائط.', success: false);
+                  AppSnackBar.show(context, message: 'حدث خطأ أثناء محاولة فتح الخرائط.', type: SnackType.error);
                 }
               }
             },
@@ -1682,7 +1763,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                               if (res.statusCode == 200 && res.data['success'] == true) {
                                 if (mounted) {
                                   Navigator.pop(ctx);
-                                  _showSnack('✅ تم تحديد وقت الوصول بنجاح!', success: true);
+                                  AppSnackBar.show(context, message: 'تم تحديد وقت الوصول بنجاح!', type: SnackType.success);
                                   await _fetchActiveOrder();
                                 }
                               }
@@ -1741,6 +1822,93 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                       itemCount: _historyOrders.length,
                       itemBuilder: (_, i) => _HistoryCard(order: _historyOrders[i]),
                     ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  TAB 4 — REJECTED ORDERS
+  // ══════════════════════════════════════════════════════
+  Widget _buildRejectedTab() {
+    final c = context.colors;
+    return RefreshIndicator(
+      color: c.primary,
+      backgroundColor: c.surface,
+      onRefresh: _fetchRejectedOrders,
+      child: _isLoadingRejected
+          ? _buildSkeletons()
+          : _rejectedOrders.isEmpty
+              ? _buildScrollableEmpty('لا توجد طلبات مرفوضة', 'الطلبات التي ترفضها ستظهر هنا لاستعادتها عند الحاجة', Icons.block_rounded)
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  itemCount: _rejectedOrders.length,
+                  itemBuilder: (_, i) {
+                    final order = _rejectedOrders[i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: c.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: c.error.withOpacity(0.2)),
+                        boxShadow: c.cardShadow,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: c.errorBg,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.block_rounded, color: c.error, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'طلب #${order.orderNumber}',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary, fontFamily: 'Cairo'),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      order.patientSnapshot?['name'] ?? 'مريض',
+                                      style: TextStyle(fontSize: 12, color: c.textSecondary, fontFamily: 'Cairo'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${order.pricing?['total'] ?? 0} جنيه',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: c.primary, fontFamily: 'Cairo'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _undoRejectOrder(order.id),
+                              icon: const Icon(Icons.restore_rounded, size: 18),
+                              label: const Text('استعادة الطلب', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, fontSize: 13)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: c.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
     );
   }
 

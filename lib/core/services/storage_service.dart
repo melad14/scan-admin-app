@@ -66,6 +66,15 @@ class StorageService {
     }
   }
 
+  static Future<void> undoRejectOrder(String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyRejectedOrders) ?? [];
+    if (list.contains(orderId)) {
+      list.remove(orderId);
+      await prefs.setStringList(_keyRejectedOrders, list);
+    }
+  }
+
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyAccessToken);

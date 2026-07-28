@@ -143,6 +143,7 @@ class AppTheme {
         contentTextStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         behavior: SnackBarBehavior.floating,
+        elevation: 6,
         actionTextColor: const Color(0xFF1D9E75),
       ),
 
@@ -313,6 +314,7 @@ class AppTheme {
         contentTextStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Color(0xFFF0F0F0)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         behavior: SnackBarBehavior.floating,
+        elevation: 6,
         actionTextColor: const Color(0xFF1D9E75),
       ),
 
