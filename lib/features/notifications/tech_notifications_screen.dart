@@ -14,6 +14,7 @@ class TechNotificationsScreen extends ConsumerStatefulWidget {
 
 class _TechNotificationsScreenState extends ConsumerState<TechNotificationsScreen> {
   final Set<String> _loadingIds = {};
+  bool _isNavigating = false;
 
   void _handleBack(BuildContext context) {
     if (Navigator.of(context).canPop()) {
@@ -24,7 +25,7 @@ class _TechNotificationsScreenState extends ConsumerState<TechNotificationsScree
   }
 
   void _onNotificationTap(BuildContext context, TechNotification item) async {
-    if (_loadingIds.contains(item.id)) return;
+    if (_isNavigating || _loadingIds.contains(item.id)) return;
     setState(() {
       _loadingIds.add(item.id);
     });
@@ -45,7 +46,15 @@ class _TechNotificationsScreenState extends ConsumerState<TechNotificationsScree
 
     final orderId = item.orderId ?? '';
 
+    // Clear loading spinner before navigating
+    if (mounted) {
+      setState(() {
+        _loadingIds.remove(item.id);
+      });
+    }
+
     if (!mounted) return;
+    _isNavigating = true;
     switch (item.type) {
       case 'new_order':
         final query = orderId.isNotEmpty
@@ -61,8 +70,10 @@ class _TechNotificationsScreenState extends ConsumerState<TechNotificationsScree
         context.go('/$query');
         break;
       case 'new_complaint':
-        context.push('/profile/complaints');
-        break;
+        context.push('/profile/complaints').then((_) {
+          if (mounted) _isNavigating = false;
+        });
+        return; // Don't clear below for push
       default:
         if (orderId.isNotEmpty) {
           final query = '?orderId=$orderId&tab=active&t=${DateTime.now().millisecondsSinceEpoch}';
@@ -72,6 +83,10 @@ class _TechNotificationsScreenState extends ConsumerState<TechNotificationsScree
         }
         break;
     }
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _isNavigating = false;
+    });
   }
 
   IconData _getIconForType(String type) {

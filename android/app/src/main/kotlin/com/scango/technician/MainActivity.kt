@@ -1,4 +1,4 @@
-package com.example.tech_app
+package com.scango.technician
 
 import io.flutter.embedding.android.FlutterActivity
 

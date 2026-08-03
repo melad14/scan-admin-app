@@ -307,6 +307,11 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
         });
         await _fetchActiveOrder();
         _tabController.animateTo(1);
+        if (_activeOrder != null && _activeOrder!.technicianArrivalTime == null) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) _showArrivalTimeBottomSheet(_activeOrder!);
+          });
+        }
       }
     } on DioException catch (e) {
       AppSnackBar.show(context, message: e.response?.data?['message'] ?? 'فشل القبول. ربما أُعطي لفني آخر.', type: SnackType.error);
