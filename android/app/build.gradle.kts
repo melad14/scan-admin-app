@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.scango.technician"
+    namespace = "com.drray.technician"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.scango.technician"
+        applicationId = "com.drray.technician"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -29,10 +29,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("../keystore/scango-release.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "scango2026"
-            keyAlias = System.getenv("KEY_ALIAS") ?: "scango"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "scango2026"
+            storeFile = file("../keystore/drray-release.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "drray2026"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "drray"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "drray2026"
         }
     }
 

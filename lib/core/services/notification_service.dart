@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tech_app/core/api/api_client.dart';
-import 'package:tech_app/core/services/storage_service.dart';
+import 'package:dr_ray_technician/core/api/api_client.dart';
+import 'package:dr_ray_technician/core/services/storage_service.dart';
 
 // ─── Global navigator key — used to navigate from notification taps ──────────
 final GlobalKey<NavigatorState> notificationNavigatorKey =
@@ -13,9 +13,9 @@ final GlobalKey<NavigatorState> notificationNavigatorKey =
 
 // ─── High-importance Android notification channel ────────────────────────────
 const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-  'scango_tech_high_importance',
-  'ScanGo Tech Notifications',
-  description: 'إشعارات تطبيق الفني لمنصة سكان جو',
+  'drray_tech_high_importance',
+  'Dr Ray Technician Notifications',
+  description: 'إشعارات تطبيق فني Dr Ray',
   importance: Importance.high,
   playSound: true,
   enableVibration: true,
@@ -28,6 +28,10 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 class NotificationService {
   static FirebaseMessaging get _messaging => FirebaseMessaging.instance;
 
+  // Real-time foreground notification event notifier
+  static final ValueNotifier<RemoteMessage?> onNotificationReceived =
+      ValueNotifier<RemoteMessage?>(null);
+
   // ── Init (called once at app startup, after Firebase.initializeApp) ─────────
   static Future<void> init() async {
     if (kIsWeb) return;
@@ -38,8 +42,9 @@ class NotificationService {
       // 2. Set up local notifications (for foreground display)
       await _initLocalNotifications();
 
-      // 3. Foreground messages → show as local notification
+      // 3. Foreground messages → show as local notification & trigger local real-time callback
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        onNotificationReceived.value = message;
         _showLocalNotification(message);
       });
 

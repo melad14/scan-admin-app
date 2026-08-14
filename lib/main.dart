@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:tech_app/core/services/notification_service.dart';
-import 'package:tech_app/core/services/storage_service.dart';
-import 'package:tech_app/core/theme/app_theme.dart';
-import 'package:tech_app/core/theme/theme_provider.dart';
+import 'package:dr_ray_technician/core/services/notification_service.dart';
+import 'package:dr_ray_technician/core/services/storage_service.dart';
+import 'package:dr_ray_technician/core/theme/app_theme.dart';
+import 'package:dr_ray_technician/core/theme/theme_provider.dart';
 import 'features/auth/tech_login_screen.dart';
 import 'features/orders/tech_orders_screen.dart';
 import 'features/profile/tech_profile_screen.dart';
@@ -27,7 +27,7 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: ScanGoTechApp(),
+      child: DrRayTechApp(),
     ),
   );
 }
@@ -82,8 +82,8 @@ final GoRouter techRouter = GoRouter(
   ],
 );
 
-class ScanGoTechApp extends ConsumerWidget {
-  const ScanGoTechApp({super.key});
+class DrRayTechApp extends ConsumerWidget {
+  const DrRayTechApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -97,7 +97,7 @@ class ScanGoTechApp extends ConsumerWidget {
     ));
 
     return MaterialApp.router(
-      title: 'ScanGo Tech | فني سكان جو',
+      title: 'Dr Ray Technician',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tech_app/core/api/api_client.dart';
-import 'package:tech_app/core/models/order.dart';
-import 'package:tech_app/core/services/storage_service.dart';
-import 'package:tech_app/core/services/notification_service.dart';
-import 'package:tech_app/core/utils/constants.dart';
-import 'package:tech_app/core/utils/app_snackbar.dart';
-import 'package:tech_app/core/utils/loading_overlay.dart';
-import 'package:tech_app/core/theme/app_colors.dart';
-import 'package:tech_app/core/theme/theme_provider.dart';
-import 'package:tech_app/core/theme/ui_components.dart';
+import 'package:dr_ray_technician/core/api/api_client.dart';
+import 'package:dr_ray_technician/core/models/order.dart';
+import 'package:dr_ray_technician/core/services/storage_service.dart';
+import 'package:dr_ray_technician/core/services/notification_service.dart';
+import 'package:dr_ray_technician/core/utils/constants.dart';
+import 'package:dr_ray_technician/core/utils/app_snackbar.dart';
+import 'package:dr_ray_technician/core/utils/loading_overlay.dart';
+import 'package:dr_ray_technician/core/theme/app_colors.dart';
+import 'package:dr_ray_technician/core/theme/theme_provider.dart';
+import 'package:dr_ray_technician/core/theme/ui_components.dart';
 import 'package:dio/dio.dart';
 import 'dart:math' as math;
 import 'package:flutter_map/flutter_map.dart';
@@ -83,14 +83,27 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     // Register FCM Device Token for notifications
     NotificationService.registerDeviceToken();
     _fetchUnreadCount();
+
+    // Listen to real-time notifications to auto-refresh orders list
+    NotificationService.onNotificationReceived.addListener(_handleNotificationReceived);
   }
 
   @override
   void dispose() {
+    NotificationService.onNotificationReceived.removeListener(_handleNotificationReceived);
     _tabController.dispose();
     _bgController.dispose();
     _reportNotesController.dispose();
     super.dispose();
+  }
+
+  void _handleNotificationReceived() {
+    final msg = NotificationService.onNotificationReceived.value;
+    if (msg != null && mounted) {
+      debugPrint('[TechOrdersScreen] Real-time notification received. Auto-refreshing data...');
+      _fetchAll();
+      _fetchUnreadCount();
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -1006,7 +1019,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('سكان جو',
+                     const Text('Dr Ray',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
                     Text('مرحباً، $_techName',
                         style: const TextStyle(fontSize: 11, color: Color(0xCCFFFFFF)),
@@ -1107,23 +1120,53 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
 
   Widget _buildTabBar() {
     final c = context.colors;
+    final isDark = context.isDark;
     return Container(
-      color: c.surface,
-      child: TabBar(
-        controller: _tabController,
-        indicatorColor: c.primary,
-        indicatorWeight: 3,
-        indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: c.primary,
-        unselectedLabelColor: c.textMuted,
-        labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
-        tabs: [
-          Tab(child: _TabItem(label: 'المتاحة', count: _availableOrders.length, active: false)),
-          const Tab(text: 'النشط'),
-          Tab(child: _TabItem(label: 'السجل', count: _historyOrders.length, active: false)),
-          Tab(child: _TabItem(label: 'المرفوضة', count: _rejectedOrders.length, active: false)),
-        ],
+      color: c.background,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.border, width: 1),
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: TabBar(
+          controller: _tabController,
+          indicator: BoxDecoration(
+            color: c.primary,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: c.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              )
+            ],
+          ),
+          indicatorColor: Colors.transparent,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelColor: Colors.white,
+          unselectedLabelColor: c.textSecondary,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+          labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, fontSize: 11),
+          dividerColor: Colors.transparent,
+          tabAlignment: TabAlignment.fill,
+          tabs: [
+            Tab(height: 36, child: _TabItem(label: 'المتاحة', count: _availableOrders.length, active: true)),
+            const Tab(height: 36, text: 'النشط'),
+            Tab(height: 36, child: _TabItem(label: 'السجل', count: _historyOrders.length, active: true)),
+            Tab(height: 36, child: _TabItem(label: 'المرفوضة', count: _rejectedOrders.length, active: true)),
+          ],
+        ),
       ),
     );
   }
@@ -1230,7 +1273,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.scango.tech',
+                    userAgentPackageName: 'com.drray.tech',
                   ),
                   MarkerLayer(
                     markers: [
@@ -2402,6 +2445,9 @@ class _TabItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final currentTextColor = DefaultTextStyle.of(context).style.color ?? c.textSecondary;
+    final isSelected = currentTextColor == Colors.white;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -2410,12 +2456,20 @@ class _TabItem extends StatelessWidget {
         if (count > 0) ...[
           const SizedBox(width: 5),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: c.primaryLight,
+              color: isSelected ? Colors.white.withOpacity(0.2) : c.primaryLight,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text('$count', style: TextStyle(fontSize: 10, color: c.primary, fontWeight: FontWeight.w700)),
+            child: Text(
+              '$count', 
+              style: TextStyle(
+                fontSize: 10, 
+                color: isSelected ? Colors.white : c.primary, 
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+              )
+            ),
           ),
         ],
       ],

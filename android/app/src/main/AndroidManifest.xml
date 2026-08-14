@@ -5,12 +5,12 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:label="ScanGo Technician"
+        android:label="Dr Ray Technician"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="scango_tech_high_importance" />
+            android:value="drray_tech_high_importance" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

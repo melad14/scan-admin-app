@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tech_app/core/theme/app_colors.dart';
+import 'package:dr_ray_technician/core/theme/app_colors.dart';
 import '../../core/models/notification.dart';
 import '../../core/services/notification_provider.dart';
 

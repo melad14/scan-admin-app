@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tech_app/core/theme/app_colors.dart';
+import 'package:dr_ray_technician/core/theme/app_colors.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final bool isVisible;

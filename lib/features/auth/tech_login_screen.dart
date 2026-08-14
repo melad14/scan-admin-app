@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
-import 'package:tech_app/core/utils/constants.dart';
-import 'package:tech_app/core/services/storage_service.dart';
-import 'package:tech_app/core/services/notification_service.dart';
-import 'package:tech_app/core/theme/app_colors.dart';
+import 'dart:ui';
 import 'dart:math' as math;
+import 'package:dr_ray_technician/core/utils/constants.dart';
+import 'package:dr_ray_technician/core/services/storage_service.dart';
+import 'package:dr_ray_technician/core/services/notification_service.dart';
+import 'package:dr_ray_technician/core/theme/app_colors.dart';
 
 class TechLoginScreen extends StatefulWidget {
   const TechLoginScreen({super.key});
@@ -17,6 +19,8 @@ class _TechLoginScreenState extends State<TechLoginScreen>
     with TickerProviderStateMixin {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _phoneFocus = FocusNode();
+  final _passwordFocusNode = FocusNode();
 
   bool _isLoading = false;
   bool _passwordVisible = false;
@@ -24,8 +28,10 @@ class _TechLoginScreenState extends State<TechLoginScreen>
 
   late AnimationController _bgController;
   late AnimationController _entryController;
+  late AnimationController _pulseController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
+  late Animation<double> _scaleAnim;
 
   final _dio = Dio(BaseOptions(
     baseUrl: Constants.apiBaseUrl,
@@ -36,20 +42,29 @@ class _TechLoginScreenState extends State<TechLoginScreen>
   @override
   void initState() {
     super.initState();
-    _bgController = AnimationController(vsync: this, duration: const Duration(seconds: 6))..repeat();
+    _bgController = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
+    _pulseController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
     _entryController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _fadeAnim = CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
+    _fadeAnim = CurvedAnimation(parent: _entryController, curve: const Interval(0.3, 1.0, curve: Curves.easeOut));
     _slideAnim = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic));
+        .animate(CurvedAnimation(parent: _entryController, curve: const Interval(0.1, 1.0, curve: Curves.easeOutCubic)));
+    _scaleAnim = Tween<double>(begin: 0.6, end: 1.0)
+        .animate(CurvedAnimation(parent: _entryController, curve: const Interval(0.0, 0.65, curve: Curves.elasticOut)));
     _entryController.forward();
+
+    _phoneFocus.addListener(() => setState(() {}));
+    _passwordFocusNode.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _bgController.dispose();
     _entryController.dispose();
+    _pulseController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _phoneFocus.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -70,10 +85,7 @@ class _TechLoginScreenState extends State<TechLoginScreen>
         await StorageService.saveRefreshToken(res.data['data']['refreshToken']);
         await StorageService.saveUserRole('technician');
         await StorageService.saveUserData(res.data['data']['technician']);
-        
-        // Register FCM Push token
         await NotificationService.registerDeviceToken();
-
         if (mounted) context.go('/');
       }
     } on DioException catch (e) {
@@ -108,253 +120,472 @@ class _TechLoginScreenState extends State<TechLoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    final isDark = context.isDark;
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      backgroundColor: c.background,
-      body: Stack(
-        children: [
-          // ── Animated Background Orbs (Only shown in Dark Mode for premium contrast) ──
-          if (isDark) ...[
-            // Orb 1 — Teal
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarIconBrightness: Brightness.light,
+        statusBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFF070D1F),
+        body: Stack(
+          children: [
+            // ── Animated Background ─────────────────────────────
             AnimatedBuilder(
-              animation: _bgController,
+              animation: Listenable.merge([_bgController, _pulseController]),
               builder: (_, __) {
                 final t = _bgController.value * 2 * math.pi;
-                return Positioned(
-                  top: size.height * 0.08 + math.sin(t) * 18,
-                  right: -60,
-                  child: Container(
-                    width: 260, height: 260,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        c.primary.withOpacity(0.18),
-                        c.primary.withOpacity(0.0),
-                      ]),
+                final p = _pulseController.value;
+                return Stack(
+                  children: [
+                    // Base gradient
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF070D1F), Color(0xFF0D1530), Color(0xFF070D1F)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
                     ),
-                  ),
+                    // Orb teal — top right
+                    Positioned(
+                      top: size.height * 0.05 + math.sin(t) * 20,
+                      right: -size.width * 0.2 + math.cos(t) * 10,
+                      child: Container(
+                        width: size.width * 0.75,
+                        height: size.width * 0.75,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(
+                            color: const Color(0xFF1D9E75).withOpacity(0.12 + p * 0.06),
+                            blurRadius: 100,
+                            spreadRadius: 40,
+                          )],
+                        ),
+                      ),
+                    ),
+                    // Orb blue — bottom left
+                    Positioned(
+                      bottom: size.height * 0.1 + math.cos(t * 0.7) * 25,
+                      left: -size.width * 0.25 + math.sin(t * 0.7) * 15,
+                      child: Container(
+                        width: size.width * 0.8,
+                        height: size.width * 0.8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(
+                            color: const Color(0xFF2B7EC2).withOpacity(0.10 + p * 0.04),
+                            blurRadius: 100,
+                            spreadRadius: 30,
+                          )],
+                        ),
+                      ),
+                    ),
+                    // Hex grid pattern
+                    CustomPaint(
+                      size: size,
+                      painter: _HexGridPainter(opacity: 0.035),
+                    ),
+                  ],
                 );
               },
             ),
-            // Orb 2 — Darker Accent
-            AnimatedBuilder(
-              animation: _bgController,
-              builder: (_, __) {
-                final t = _bgController.value * 2 * math.pi + 2;
-                return Positioned(
-                  bottom: size.height * 0.12 + math.cos(t) * 15,
-                  left: -80,
-                  child: Container(
-                    width: 300, height: 300,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(colors: [
-                        c.accent.withOpacity(0.12),
-                        c.accent.withOpacity(0.0),
-                      ]),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
 
-          // ── Content ──────────────────────────────────────
-          SafeArea(
-            child: FadeTransition(
-              opacity: _fadeAnim,
-              child: SlideTransition(
-                position: _slideAnim,
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 24),
+            // ── Content ─────────────────────────────────────────
+            SafeArea(
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: SlideTransition(
+                  position: _slideAnim,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 24),
 
-                        // ── Brand Pill ─────────────────────────
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: c.primaryLight,
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: c.primary.withOpacity(0.2)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(width: 8, height: 8,
-                                  decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle)),
-                              const SizedBox(width: 8),
-                              Text('بوابة فريق المركز',
-                                  style: TextStyle(color: c.primary, fontSize: 12, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // ── Logo ───────────────────────────────
-                        Container(
-                          width: 80, height: 80,
-                          decoration: BoxDecoration(
-                            color: c.primary,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: c.primaryGlow,
-                          ),
-                          child: const Icon(Icons.medical_services_rounded,
-                              color: Colors.white, size: 40),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Title ──────────────────────────────
-                        Text('سكان جو',
-                            style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800,
-                                color: c.textPrimary, letterSpacing: -0.5)),
-                        const SizedBox(height: 6),
-                        Text('لوحة تحكم فريق المركز',
-                            style: TextStyle(fontSize: 14, color: c.textSecondary)),
-                        const SizedBox(height: 36),
-
-                        // ── Form Card ──────────────────────────
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: c.surface,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: c.border),
-                            boxShadow: isDark ? [] : c.cardShadow,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Error Banner
-                              if (_errorMessage != null) ...[
+                          // ── Role Badge ──────────────────────────
+                          ScaleTransition(
+                            scale: _scaleAnim,
+                            child: Column(
+                              children: [
+                                // Badge pill
                                 Container(
-                                  padding: const EdgeInsets.all(14),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: c.errorBg,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: c.error.withOpacity(0.3)),
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(color: const Color(0xFF1D9E75).withOpacity(0.4)),
+                                    color: const Color(0xFF1D9E75).withOpacity(0.1),
                                   ),
-                                  child: Row(children: [
-                                    Icon(Icons.error_outline_rounded, color: c.error, size: 20),
-                                    const SizedBox(width: 10),
-                                    Expanded(child: Text(_errorMessage!,
-                                        style: TextStyle(color: c.error, fontSize: 13, height: 1.4))),
-                                    GestureDetector(
-                                      onTap: () => setState(() => _errorMessage = null),
-                                      child: Icon(Icons.close_rounded, color: c.error, size: 18),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 8, height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF2DDBA4),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [BoxShadow(color: Color(0xFF2DDBA4), blurRadius: 6)],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'بوابة فريق الفنيين',
+                                        style: TextStyle(
+                                          color: Color(0xFF2DDBA4),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          fontFamily: 'Cairo',
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 28),
+
+                                // Logo with layered glow
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Outer glow
+                                    Container(
+                                      width: 100, height: 100,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(color: const Color(0xFF1D9E75).withOpacity(0.3), blurRadius: 40, spreadRadius: 10),
+                                        ],
+                                      ),
                                     ),
-                                  ]),
+                                    // Logo container
+                                    Container(
+                                      width: 88, height: 88,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFF2DDBA4), Color(0xFF1D9E75), Color(0xFF085041)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        border: Border.all(color: Colors.white.withOpacity(0.15), width: 2),
+                                      ),
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          'assets/icon/app_icon.png',
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => const Icon(
+                                            Icons.engineering_rounded,
+                                            color: Colors.white, size: 44,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 20),
-                              ],
 
-                              // Phone
-                              _FieldLabel(text: 'رقم الهاتف', colors: c),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                textDirection: TextDirection.ltr,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(color: c.textPrimary),
-                                decoration: const InputDecoration(
-                                  prefixIcon: Icon(Icons.phone_rounded),
-                                  hintText: '01012345678',
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Password
-                              _FieldLabel(text: 'كلمة المرور', colors: c),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _passwordController,
-                                obscureText: !_passwordVisible,
-                                textDirection: TextDirection.ltr,
-                                style: TextStyle(color: c.textPrimary),
-                                onSubmitted: (_) => _handleLogin(),
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                  hintText: '••••••••',
-                                  suffixIcon: IconButton(
-                                    icon: Icon(_passwordVisible
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                        color: c.textMuted, size: 20),
-                                    onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                                const Text(
+                                  'Dr Ray Technician',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                    shadows: [Shadow(color: Color(0xFF1D9E75), blurRadius: 20)],
                                   ),
                                 ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'نظام إدارة الفنيين الميدانيين',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withOpacity(0.5),
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 36),
+
+                          // ── Glass Form Card ─────────────────────
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(28),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                              child: Container(
+                                padding: const EdgeInsets.all(28),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.07),
+                                  borderRadius: BorderRadius.circular(28),
+                                  border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    const Text(
+                                      'تسجيل الدخول',
+                                      style: TextStyle(
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 24),
+
+                                    // Error
+                                    if (_errorMessage != null) ...[
+                                      _TechErrorBanner(message: _errorMessage!, onClose: () => setState(() => _errorMessage = null)),
+                                      const SizedBox(height: 20),
+                                    ],
+
+                                    // Phone field
+                                    _TechInputField(
+                                      controller: _phoneController,
+                                      focusNode: _phoneFocus,
+                                      label: 'رقم الهاتف',
+                                      hint: '01012345678',
+                                      icon: Icons.phone_rounded,
+                                      isFocused: _phoneFocus.hasFocus,
+                                      keyboardType: TextInputType.phone,
+                                      textDirection: TextDirection.ltr,
+                                      textAlign: TextAlign.right,
+                                      onSubmitted: (_) => _passwordFocusNode.requestFocus(),
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Password field
+                                    _TechInputField(
+                                      controller: _passwordController,
+                                      focusNode: _passwordFocusNode,
+                                      label: 'كلمة المرور',
+                                      hint: '••••••••',
+                                      icon: Icons.lock_outline_rounded,
+                                      isFocused: _passwordFocusNode.hasFocus,
+                                      obscureText: !_passwordVisible,
+                                      onSubmitted: (_) => _handleLogin(),
+                                      suffixWidget: GestureDetector(
+                                        onTap: () => setState(() => _passwordVisible = !_passwordVisible),
+                                        child: Icon(
+                                          _passwordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                          color: Colors.white.withOpacity(0.45),
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 32),
+
+                                    // Login Button
+                                    _TechGlowButton(
+                                      label: 'دخول',
+                                      isLoading: _isLoading,
+                                      onTap: _handleLogin,
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 28),
-
-                              // Login Button
-                              _TealButton(label: 'دخول', isLoading: _isLoading, primary: c.primary, onTap: _handleLogin),
-                            ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
 
-                        // Footer
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: c.surface,
+                          const SizedBox(height: 24),
+
+                          // Security Notice
+                          ClipRRect(
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: c.border),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.shield_outlined, size: 15, color: Colors.white.withOpacity(0.35)),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'لممثلي المركز المعتمدين فقط',
+                                      style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.35), fontFamily: 'Cairo'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.shield_outlined, size: 15, color: c.textMuted),
-                              const SizedBox(width: 8),
-                               Text('لممثلي المركز المعتمدين فقط',
-                                  style: TextStyle(fontSize: 12, color: c.textMuted)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
+                          const SizedBox(height: 32),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Field Label ────────────────────────────────────────────────
-class _FieldLabel extends StatelessWidget {
-  final String text;
-  final AppColorTokens colors;
-  const _FieldLabel({required this.text, required this.colors});
+// ── Hex Grid Painter ─────────────────────────────────────────────────
+class _HexGridPainter extends CustomPainter {
+  final double opacity;
+  _HexGridPainter({required this.opacity});
+
   @override
-  Widget build(BuildContext context) => Text(text,
-      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.textSecondary));
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(opacity)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    const r = 24.0;
+    final h = r * math.sqrt(3);
+    double x = 0, y = 0;
+    int row = 0;
+    while (y < size.height + r) {
+      x = (row % 2 == 0) ? 0 : h;
+      while (x < size.width + r) {
+        _drawHex(canvas, paint, x, y, r);
+        x += h * 2;
+      }
+      y += r * 1.5;
+      row++;
+    }
+  }
+
+  void _drawHex(Canvas canvas, Paint paint, double cx, double cy, double r) {
+    final path = Path();
+    for (int i = 0; i < 6; i++) {
+      final angle = math.pi / 180 * (60 * i - 30);
+      final px = cx + r * math.cos(angle);
+      final py = cy + r * math.sin(angle);
+      if (i == 0) path.moveTo(px, py); else path.lineTo(px, py);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_HexGridPainter oldDelegate) => false;
 }
 
-// ── Teal Solid Button ───────────────────────────────────────────
-class _TealButton extends StatefulWidget {
+// ── Tech Input Field ─────────────────────────────────────────────────
+class _TechInputField extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final bool isFocused;
+  final bool obscureText;
+  final TextDirection? textDirection;
+  final TextAlign textAlign;
+  final TextInputType? keyboardType;
+  final Widget? suffixWidget;
+  final ValueChanged<String>? onSubmitted;
+
+  const _TechInputField({
+    required this.controller,
+    required this.focusNode,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.isFocused,
+    this.obscureText = false,
+    this.textDirection,
+    this.textAlign = TextAlign.start,
+    this.keyboardType,
+    this.suffixWidget,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accentColor = Color(0xFF1D9E75);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withOpacity(0.65),
+            fontFamily: 'Cairo',
+          ),
+        ),
+        const SizedBox(height: 8),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isFocused ? accentColor.withOpacity(0.7) : Colors.white.withOpacity(0.1),
+              width: isFocused ? 1.5 : 1,
+            ),
+            boxShadow: isFocused
+                ? [BoxShadow(color: accentColor.withOpacity(0.15), blurRadius: 12)]
+                : [],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                obscureText: obscureText,
+                textDirection: textDirection,
+                textAlign: textAlign,
+                keyboardType: keyboardType,
+                onSubmitted: onSubmitted,
+                autocorrect: false,
+                style: const TextStyle(color: Colors.white, fontSize: 15, fontFamily: 'Cairo'),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.06),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  border: InputBorder.none,
+                  hintText: hint,
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.28), fontFamily: 'Cairo'),
+                  prefixIcon: Icon(icon, color: isFocused ? accentColor : Colors.white.withOpacity(0.4), size: 20),
+                  suffixIcon: suffixWidget != null ? Padding(padding: const EdgeInsets.only(right: 12), child: suffixWidget) : null,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Tech Glow Button ─────────────────────────────────────────────────
+class _TechGlowButton extends StatefulWidget {
   final String label;
   final bool isLoading;
-  final Color primary;
   final VoidCallback onTap;
-  const _TealButton({required this.label, required this.isLoading, required this.primary, required this.onTap});
+  const _TechGlowButton({required this.label, required this.isLoading, required this.onTap});
   @override
-  State<_TealButton> createState() => _TealButtonState();
+  State<_TechGlowButton> createState() => _TechGlowButtonState();
 }
 
-class _TealButtonState extends State<_TealButton> {
+class _TechGlowButtonState extends State<_TechGlowButton> {
   bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -363,29 +594,88 @@ class _TealButtonState extends State<_TealButton> {
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
+        scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 100),
-        child: Container(
-          height: 56,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 58,
           decoration: BoxDecoration(
-            color: widget.isLoading
-                ? widget.primary.withOpacity(0.6)
-                : _pressed ? widget.primary.withOpacity(0.85) : widget.primary,
-            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: _pressed
+                  ? [const Color(0xFF16755A), const Color(0xFF1D9E75)]
+                  : [const Color(0xFF2DDBA4), const Color(0xFF1D9E75), const Color(0xFF085041)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
             boxShadow: widget.isLoading ? [] : [
-              BoxShadow(color: widget.primary.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4)),
+              BoxShadow(
+                color: const Color(0xFF1D9E75).withOpacity(_pressed ? 0.2 : 0.4),
+                blurRadius: _pressed ? 8 : 20,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
           child: Center(
             child: widget.isLoading
-                ? const SizedBox(height: 22, width: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                : Text(widget.label,
-                    style: const TextStyle(color: Colors.white, fontSize: 17,
-                        fontWeight: FontWeight.w800, fontFamily: 'Cairo')),
+                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.label,
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, fontFamily: 'Cairo'),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.arrow_back_rounded, color: Colors.white.withOpacity(0.8), size: 20),
+                    ],
+                  ),
           ),
         ),
       ),
     );
   }
 }
+
+// ── Tech Error Banner ─────────────────────────────────────────────────
+class _TechErrorBanner extends StatelessWidget {
+  final String message;
+  final VoidCallback onClose;
+  const _TechErrorBanner({required this.message, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFD44245).withOpacity(0.15),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFD44245).withOpacity(0.4)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFFF6B6E), size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(color: Color(0xFFFF9B9D), fontSize: 13, height: 1.4, fontFamily: 'Cairo'),
+                ),
+              ),
+              GestureDetector(
+                onTap: onClose,
+                child: const Icon(Icons.close_rounded, color: Color(0xFFFF6B6E), size: 18),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+

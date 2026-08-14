@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tech_app/core/api/api_client.dart';
-import 'package:tech_app/core/theme/app_colors.dart';
-import 'package:tech_app/core/theme/ui_components.dart';
-import 'package:tech_app/core/utils/app_snackbar.dart';
+import 'package:dr_ray_technician/core/api/api_client.dart';
+import 'package:dr_ray_technician/core/theme/app_colors.dart';
+import 'package:dr_ray_technician/core/theme/ui_components.dart';
+import 'package:dr_ray_technician/core/utils/app_snackbar.dart';
 import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
 

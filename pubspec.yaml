@@ -1,6 +1,6 @@
-name: tech_app
-description: Technician facing mobile application for ScanGo home medical services.
-version: 1.0.0
+name: dr_ray_technician
+description: Dr Ray Technician - Mobile application for home medical services technicians.
+version: 1.0.0+1
 publish_to: 'none'
 
 environment:
@@ -32,7 +32,7 @@ dev_dependencies:
   flutter_native_splash: ^2.4.8
 flutter_launcher_icons:
   android: true
-  ios: true
+  ios: false
   image_path: "assets/logo.png"
 
 flutter_native_splash:
