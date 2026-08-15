@@ -1,4 +1,4 @@
-import 'package:firebase_core/firebase_core.dart';
+﻿import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -7,53 +7,53 @@ import 'package:go_router/go_router.dart';
 import 'package:dr_ray_technician/core/api/api_client.dart';
 import 'package:dr_ray_technician/core/services/storage_service.dart';
 
-// ─── Global navigator key — used to navigate from notification taps ──────────
+// Global navigator key
 final GlobalKey<NavigatorState> notificationNavigatorKey =
     GlobalKey<NavigatorState>();
 
-// ─── High-importance Android notification channel ────────────────────────────
+// High-importance Android notification channel (Importance.max = heads-up banner)
 const AndroidNotificationChannel _channel = AndroidNotificationChannel(
   'drray_tech_high_importance',
   'Dr Ray Technician Notifications',
-  description: 'إشعارات تطبيق فني Dr Ray',
-  importance: Importance.high,
+  description: 'اشعارات تطبيق فني Dr Ray',
+  importance: Importance.max,
   playSound: true,
   enableVibration: true,
+  enableLights: true,
+  showBadge: true,
 );
 
-// ─── Local notifications plugin instance ─────────────────────────────────────
+// Local notifications plugin instance
 final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
 class NotificationService {
   static FirebaseMessaging get _messaging => FirebaseMessaging.instance;
 
-  // Real-time foreground notification event notifier
   static final ValueNotifier<RemoteMessage?> onNotificationReceived =
       ValueNotifier<RemoteMessage?>(null);
 
-  // ── Init (called once at app startup, after Firebase.initializeApp) ─────────
   static Future<void> init() async {
     if (kIsWeb) return;
     try {
-      // 1. Register background handler FIRST (before any other FCM setup)
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-      // 2. Set up local notifications (for foreground display)
       await _initLocalNotifications();
 
-      // 3. Foreground messages → show as local notification & trigger local real-time callback
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         onNotificationReceived.value = message;
         _showLocalNotification(message);
       });
 
-      // 4. Background tap → navigate when app resumes
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         _handleNotificationTap(message.data);
       });
 
-      // 5. Terminated state tap → app was cold-started from notification
       final initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
         Future.delayed(const Duration(milliseconds: 800), () {
@@ -61,7 +61,6 @@ class NotificationService {
         });
       }
 
-      // 6. Auto-refresh token when Firebase rotates it
       _messaging.onTokenRefresh.listen((String token) async {
         await _sendTokenToServer(token);
       });
@@ -70,7 +69,6 @@ class NotificationService {
     }
   }
 
-  // ── Initialize FlutterLocalNotifications ────────────────────────────────────
   static Future<void> _initLocalNotifications() async {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -81,7 +79,6 @@ class NotificationService {
     await _localNotifications.initialize(
       settings: initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Tapped a foreground local notification → navigate
         if (response.payload != null && response.payload!.isNotEmpty) {
           final parts = response.payload!.split('|');
           final type = parts.isNotEmpty ? parts[0] : '';
@@ -91,14 +88,12 @@ class NotificationService {
       },
     );
 
-    // Create the Android notification channel
-    await _localNotifications
+    final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(_channel);
   }
 
-  // ── Show a local notification banner (foreground) ───────────────────────────
   static void _showLocalNotification(RemoteMessage message) {
     final notification = message.notification;
     if (notification == null) return;
@@ -115,8 +110,8 @@ class NotificationService {
           _channel.id,
           _channel.name,
           channelDescription: _channel.description,
-          importance: Importance.high,
-          priority: Priority.high,
+          importance: Importance.max,
+          priority: Priority.max,
           icon: '@mipmap/ic_launcher',
           playSound: true,
           enableVibration: true,
@@ -128,7 +123,6 @@ class NotificationService {
 
   static bool _isNavigating = false;
 
-  // ── Navigate to the relevant screen based on notification data ──────────────
   static void _handleNotificationTap(Map<String, dynamic> data) {
     if (_isNavigating) return;
     _isNavigating = true;
@@ -156,7 +150,8 @@ class NotificationService {
       GoRouter.of(context).go('/$query');
     } else {
       if (orderId.isNotEmpty) {
-        final query = '?orderId=$orderId&tab=active&t=${DateTime.now().millisecondsSinceEpoch}';
+        final query =
+            '?orderId=$orderId&tab=active&t=${DateTime.now().millisecondsSinceEpoch}';
         GoRouter.of(context).go('/$query');
       } else {
         GoRouter.of(context).go('/');
@@ -164,7 +159,6 @@ class NotificationService {
     }
   }
 
-  // ── Request permission + register FCM token with backend ────────────────────
   static Future<void> registerDeviceToken() async {
     if (kIsWeb) return;
     try {
@@ -188,12 +182,11 @@ class NotificationService {
     }
   }
 
-  // ── Send FCM token to ScanGo backend ────────────────────────────────────────
   static Future<void> _sendTokenToServer(String token) async {
     try {
       final accessToken = await StorageService.getAccessToken();
       if (accessToken == null) {
-        debugPrint('[TechNotificationService] Not authenticated — skipping token upload');
+        debugPrint('[TechNotificationService] Not authenticated - skipping token upload');
         return;
       }
 
@@ -204,7 +197,7 @@ class NotificationService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint('[TechNotificationService] FCM token updated on server ✅');
+        debugPrint('[TechNotificationService] FCM token updated on server');
       }
     } catch (e) {
       debugPrint('[TechNotificationService] _sendTokenToServer error: $e');
@@ -212,9 +205,10 @@ class NotificationService {
   }
 }
 
-// ─── Background message handler — MUST be a top-level function ───────────────
+// Background handler - MUST be top-level function
+// FCM auto-shows the notification banner using channel in AndroidManifest.xml
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  debugPrint('[TechNotificationService] Background message: ${message.messageId}');
+  debugPrint('[TechNotificationService] Background: ${message.data["type"]}');
 }
