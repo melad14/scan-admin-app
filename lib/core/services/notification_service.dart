@@ -1,4 +1,4 @@
-﻿import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -13,7 +13,7 @@ final GlobalKey<NavigatorState> notificationNavigatorKey =
 
 // High-importance Android notification channel (Importance.max = heads-up banner)
 const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-  'drray_tech_high_importance',
+  'drray_tech_high_importance_v2',
   'Dr Ray Technician Notifications',
   description: 'اشعارات تطبيق فني Dr Ray',
   importance: Importance.max,
@@ -102,7 +102,7 @@ class NotificationService {
     final type = message.data['type'] ?? '';
 
     _localNotifications.show(
-      id: message.messageId.hashCode,
+      id: (message.messageId ?? '').hashCode,
       title: notification.title,
       body: notification.body,
       notificationDetails: NotificationDetails(
@@ -172,6 +172,7 @@ class NotificationService {
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         final token = await _messaging.getToken();
         if (token != null) {
+          debugPrint('[TechNotificationService] FCM Token: $token');
           await _sendTokenToServer(token);
         }
       } else {
