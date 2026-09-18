@@ -159,6 +159,11 @@ class NotificationService {
     }
   }
 
+  /// True when the user has refused the Android 13+ notification permission.
+  /// The UI watches this to tell the technician how to re-enable it.
+  static final ValueNotifier<bool> notificationsBlocked =
+      ValueNotifier<bool>(false);
+
   static Future<void> registerDeviceToken() async {
     if (kIsWeb) return;
     try {
@@ -169,17 +174,36 @@ class NotificationService {
         provisional: false,
       );
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        final token = await _messaging.getToken();
-        if (token != null) {
-          debugPrint('[TechNotificationService] FCM Token: $token');
-          await _sendTokenToServer(token);
-        }
-      } else {
+      final denied =
+          settings.authorizationStatus == AuthorizationStatus.denied;
+      notificationsBlocked.value = denied;
+      if (denied) {
         debugPrint('[TechNotificationService] Permission denied by user');
+      }
+
+      // Always register the token, even when permission is denied: the
+      // backend still writes in-app notifications, and if the technician
+      // later enables notifications from Settings, pushes start working
+      // without needing to log in again.
+      final token = await _messaging.getToken();
+      if (token != null) {
+        debugPrint('[TechNotificationService] FCM Token: $token');
+        await _sendTokenToServer(token);
+      } else {
+        debugPrint('[TechNotificationService] getToken() returned null — check google-services.json');
       }
     } catch (e) {
       debugPrint('[TechNotificationService] registerDeviceToken error: $e');
+    }
+  }
+
+  /// This device's token — sent with /auth/logout so only this device is forgotten.
+  static Future<String?> currentToken() async {
+    if (kIsWeb) return null;
+    try {
+      return await _messaging.getToken();
+    } catch (_) {
+      return null;
     }
   }
 

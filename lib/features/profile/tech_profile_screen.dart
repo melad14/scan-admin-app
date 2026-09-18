@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dr_ray_technician/core/api/api_client.dart';
 import 'package:dr_ray_technician/core/services/storage_service.dart';
+import 'package:dr_ray_technician/core/services/notification_service.dart';
 import 'package:dr_ray_technician/core/utils/constants.dart';
 import 'package:dr_ray_technician/core/utils/loading_overlay.dart';
 import 'package:dr_ray_technician/core/theme/app_colors.dart';
@@ -96,7 +97,10 @@ class _TechProfileScreenState extends ConsumerState<TechProfileScreen> {
     );
     if (ok == true) {
       setState(() => _isLoggingOut = true);
-      try { await _api.dio.post(Constants.logout); } catch (_) {}
+      try {
+        final fcmToken = await NotificationService.currentToken();
+        await _api.dio.post(Constants.logout, data: {'fcmToken': fcmToken});
+      } catch (_) {}
       await StorageService.clearAll();
       if (mounted) context.go('/login');
     }

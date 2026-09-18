@@ -23,3 +23,7 @@
 # Keep crash-free for release
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# flutter_local_notifications (receivers are looked up by reflection)
+-keep class com.dexterous.** { *; }
+-dontwarn com.dexterous.**

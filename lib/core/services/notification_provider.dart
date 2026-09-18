@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../models/notification.dart';
 import '../utils/constants.dart';
+import 'notification_service.dart';
 
 class TechNotificationsState {
   final List<TechNotification> notifications;
@@ -36,6 +37,21 @@ class TechNotificationsNotifier extends StateNotifier<TechNotificationsState> {
 
   TechNotificationsNotifier() : super(TechNotificationsState()) {
     fetchNotifications();
+    // Re-fetch whenever a push arrives while the app is open, so the list and
+    // unread badge update in real time instead of only on first build.
+    NotificationService.onNotificationReceived.addListener(_onPush);
+  }
+
+  void _onPush() {
+    if (NotificationService.onNotificationReceived.value != null) {
+      fetchNotifications();
+    }
+  }
+
+  @override
+  void dispose() {
+    NotificationService.onNotificationReceived.removeListener(_onPush);
+    super.dispose();
   }
 
   Future<void> fetchNotifications() async {

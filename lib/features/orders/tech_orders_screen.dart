@@ -86,11 +86,47 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
 
     // Listen to real-time notifications to auto-refresh orders list
     NotificationService.onNotificationReceived.addListener(_handleNotificationReceived);
+    // Warn the technician if they refused the notification permission
+    NotificationService.notificationsBlocked.addListener(_handleNotificationsBlocked);
+    if (NotificationService.notificationsBlocked.value) _handleNotificationsBlocked();
+  }
+
+  bool _blockedDialogShown = false;
+
+  void _handleNotificationsBlocked() {
+    if (!NotificationService.notificationsBlocked.value || _blockedDialogShown || !mounted) return;
+    _blockedDialogShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('الإشعارات متوقفة',
+              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center),
+          content: const Text(
+            'مش هيوصلك تنبيه بالطلبات الجديدة لأن إذن الإشعارات مرفوض.\n\n'
+            'فعّله من: الإعدادات ← التطبيقات ← Dr Ray Technician ← الإشعارات.\n'
+            'على أجهزة Xiaomi فعّل كمان "التشغيل التلقائي" واختار "بدون قيود" في البطارية.',
+            style: TextStyle(fontFamily: 'Cairo', height: 1.6),
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('تمام', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   @override
   void dispose() {
     NotificationService.onNotificationReceived.removeListener(_handleNotificationReceived);
+    NotificationService.notificationsBlocked.removeListener(_handleNotificationsBlocked);
     _tabController.dispose();
     _bgController.dispose();
     _reportNotesController.dispose();
@@ -621,7 +657,10 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     );
     if (ok == true) {
       setState(() => _isLoggingOut = true);
-      try { await _api.dio.post(Constants.logout); } catch (_) {}
+      try {
+        final fcmToken = await NotificationService.currentToken();
+        await _api.dio.post(Constants.logout, data: {'fcmToken': fcmToken});
+      } catch (_) {}
       await StorageService.clearAll();
       if (mounted) context.go('/login');
     }
@@ -1842,8 +1881,9 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     try {
       final res = await _api.dio.get(Constants.techNotifications);
       if (res.statusCode == 200 && mounted) {
-        final notifications = res.data['notifications'] as List? ?? [];
-        final count = notifications.where((n) => n['isRead'] == false).length;
+        // Backend shape: { success, data: { notifications: [...], unreadCount: N } }
+        final data = res.data['data'];
+        final count = data is Map ? (data['unreadCount'] as int? ?? 0) : 0;
         setState(() => _unreadCount = count);
       }
     } catch (_) {}
