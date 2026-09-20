@@ -1,11 +1,11 @@
 {
-    "name": "tech_app",
-    "short_name": "tech_app",
+    "name": "Dr Ray Technician",
+    "short_name": "Dr Ray Tech",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Dr Ray Technician - Mobile application for home medical services technicians.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
