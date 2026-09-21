@@ -122,10 +122,19 @@ class _TechComplaintsScreenState extends State<TechComplaintsScreen> with Single
   }
 
   Future<void> _callPatient(String phone) async {
-    final uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
+    final number = phone.trim();
+    if (number.isEmpty) {
+      AppSnackBar.show(context, message: 'رقم هاتف المريض غير متاح لهذا الطلب', type: SnackType.error);
+      return;
+    }
+    final uri = Uri.parse('tel:$number');
+    try {
+      // canLaunchUrl can report false for tel: when no dialer query permission
+      // is granted, so try the launch and fall back to the error message.
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw Exception('launch returned false');
+      }
+    } catch (_) {
       if (mounted) {
         AppSnackBar.show(context, message: 'تعذر فتح تطبيق الاتصال', type: SnackType.error);
       }
