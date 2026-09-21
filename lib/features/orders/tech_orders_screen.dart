@@ -321,6 +321,23 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
     return e.response?.data?['message'] ?? 'حدث خطأ. اسحب للتحديث.';
   }
 
+  Future<void> _callPatientNumber(String phone) async {
+    final number = phone.trim();
+    if (number.isEmpty) {
+      AppSnackBar.show(context, message: 'رقم هاتف المريض غير متاح', type: SnackType.error);
+      return;
+    }
+    try {
+      if (!await launchUrl(Uri.parse('tel:$number'), mode: LaunchMode.externalApplication)) {
+        throw Exception('launch failed');
+      }
+    } catch (_) {
+      if (mounted) {
+        AppSnackBar.show(context, message: 'تعذر فتح تطبيق الاتصال', type: SnackType.error);
+      }
+    }
+  }
+
   Future<void> _toggleDuty() async {
     setState(() => _isDutyLoading = true);
     try {
@@ -1440,6 +1457,44 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                     '${order.location?['street']}، ${order.location?['district']}'),
                 if ((order.caseDetails?['notes'] ?? '').toString().isNotEmpty)
                   _InfoTile(Icons.notes_rounded, 'ملاحظات', order.caseDetails?['notes'] ?? ''),
+                const SizedBox(height: 12),
+                // Contact the patient: order message thread + direct call
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: c.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => context.push(
+                          '/orders/${order.id}/chat?orderNumber=${Uri.encodeComponent(order.orderNumber)}',
+                        ),
+                        icon: const Icon(Icons.forum_rounded, size: 17),
+                        label: const Text('مراسلة المريض',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: c.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: c.primary.withOpacity(0.5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => _callPatientNumber(order.patientSnapshot?['phone']?.toString() ?? ''),
+                        icon: const Icon(Icons.phone_rounded, size: 17),
+                        label: const Text('اتصال',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

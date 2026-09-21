@@ -13,6 +13,7 @@ import 'features/orders/tech_orders_screen.dart';
 import 'features/profile/tech_profile_screen.dart';
 import 'features/profile/tech_complaints_screen.dart';
 import 'features/notifications/tech_notifications_screen.dart';
+import 'features/chat/order_chat_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,6 +75,13 @@ final GoRouter techRouter = GoRouter(
     GoRoute(
       path: '/profile/complaints',
       builder: (BuildContext context, GoRouterState state) => const TechComplaintsScreen(),
+    ),
+    GoRoute(
+      path: '/orders/:orderId/chat',
+      builder: (BuildContext context, GoRouterState state) => OrderChatScreen(
+        orderId: state.pathParameters['orderId']!,
+        orderNumber: state.uri.queryParameters['orderNumber'],
+      ),
     ),
     GoRoute(
       path: '/notifications',

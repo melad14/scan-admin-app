@@ -136,7 +136,13 @@ class NotificationService {
     final type = data['type']?.toString() ?? '';
     final orderId = data['orderId']?.toString() ?? '';
 
-    if (type == 'new_complaint') {
+    if (type == 'new_message') {
+      if (orderId.isNotEmpty) {
+        GoRouter.of(context).push('/orders/$orderId/chat');
+      } else {
+        GoRouter.of(context).go('/');
+      }
+    } else if (type == 'new_complaint') {
       GoRouter.of(context).push('/profile/complaints');
     } else if (type == 'new_order') {
       final query = orderId.isNotEmpty
