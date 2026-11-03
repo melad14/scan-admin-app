@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:dr_ray_technician/core/services/notification_service.dart';
+import 'package:dr_ray_technician/core/services/update_service.dart';
 import 'package:dr_ray_technician/core/services/storage_service.dart';
 import 'package:dr_ray_technician/core/theme/app_theme.dart';
 import 'package:dr_ray_technician/core/theme/theme_provider.dart';
@@ -31,6 +32,9 @@ void main() async {
       child: DrRayTechApp(),
     ),
   );
+
+  // Ask the server whether a newer build was published (dashboard → Settings → App Updates)
+  UpdateService.start();
 }
 
 final GoRouter techRouter = GoRouter(
