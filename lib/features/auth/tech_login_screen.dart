@@ -85,7 +85,9 @@ class _TechLoginScreenState extends State<TechLoginScreen>
         await StorageService.saveRefreshToken(res.data['data']['refreshToken']);
         await StorageService.saveUserRole('technician');
         await StorageService.saveUserData(res.data['data']['technician']);
-        await NotificationService.registerDeviceToken();
+        // Not awaited: token registration retries for up to a minute on a bad
+        // network and must never hold the technician on the login screen.
+        NotificationService.registerDeviceToken();
         if (mounted) context.go('/');
       }
     } on DioException catch (e) {

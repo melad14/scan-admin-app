@@ -29,6 +29,7 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 
 class NotificationService {
   static FirebaseMessaging get _messaging => FirebaseMessaging.instance;
+  static AppLifecycleListener? _lifecycleListener;
 
   static final ValueNotifier<RemoteMessage?> onNotificationReceived =
       ValueNotifier<RemoteMessage?>(null);
@@ -63,6 +64,11 @@ class NotificationService {
 
       _messaging.onTokenRefresh.listen((String token) async {
         await _sendTokenToServer(token);
+      });
+
+      // Re-sync the token whenever the app comes back to the foreground
+      _lifecycleListener ??= AppLifecycleListener(onResume: () {
+        _onAppResumed();
       });
     } catch (e) {
       debugPrint('[TechNotificationService] init error: $e');
@@ -170,36 +176,99 @@ class NotificationService {
   static final ValueNotifier<bool> notificationsBlocked =
       ValueNotifier<bool>(false);
 
-  static Future<void> registerDeviceToken() async {
-    if (kIsWeb) return;
-    try {
-      final settings = await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
+  /// Sent with error reports so the server log shows which build failed.
+  /// Keep in sync with `version:` in pubspec.yaml.
+  static const String _appTag = 'tech';
+  static const String _buildTag = '1.0.1+2';
 
+  static Future<void>? _inFlight;
+  static DateTime? _lastSuccess;
+
+  /// Ask for permission (unless [askPermission] is false), fetch the FCM token
+  /// and upload it. Never throws; concurrent calls share one run. Every failure
+  /// is reported to the server (`[FCM CLIENT ERROR]` in pm2 logs) instead of
+  /// being swallowed — that silent catch is why technicians had no token.
+  static Future<void> registerDeviceToken({bool askPermission = true}) {
+    if (kIsWeb) return Future.value();
+    return _inFlight ??=
+        _register(askPermission).whenComplete(() => _inFlight = null);
+  }
+
+  /// Called when the app returns to the foreground: re-sync the token (it may
+  /// have been purged server-side as dead) without showing a permission dialog.
+  static Future<void> _onAppResumed() async {
+    final last = _lastSuccess;
+    if (last != null && DateTime.now().difference(last).inMinutes < 15) return;
+    if (await StorageService.getAccessToken() == null) return;
+    await registerDeviceToken(askPermission: false);
+  }
+
+  static Future<void> _register(bool askPermission) async {
+    String permission = 'unknown';
+    try {
+      final settings = askPermission
+          ? await _messaging.requestPermission(
+              alert: true,
+              badge: true,
+              sound: true,
+              provisional: false,
+            )
+          : await _messaging.getNotificationSettings();
+      permission = settings.authorizationStatus.name;
       final denied =
           settings.authorizationStatus == AuthorizationStatus.denied;
       notificationsBlocked.value = denied;
       if (denied) {
         debugPrint('[TechNotificationService] Permission denied by user');
       }
-
-      // Always register the token, even when permission is denied: the
-      // backend still writes in-app notifications, and if the technician
-      // later enables notifications from Settings, pushes start working
-      // without needing to log in again.
-      final token = await _messaging.getToken();
-      if (token != null) {
-        debugPrint('[TechNotificationService] FCM Token: $token');
-        await _sendTokenToServer(token);
-      } else {
-        debugPrint('[TechNotificationService] getToken() returned null — check google-services.json');
-      }
     } catch (e) {
-      debugPrint('[TechNotificationService] registerDeviceToken error: $e');
+      // Don't stop here — the token can still be fetched and uploaded.
+      await _reportError('permission', e, permission);
+    }
+
+    // Always register the token, even when permission is denied: the backend
+    // still writes in-app notifications, and if the technician later enables
+    // notifications from Settings, pushes start working without a re-login.
+    String? token;
+    Object? lastError;
+    for (var attempt = 1; attempt <= 3 && token == null; attempt++) {
+      try {
+        token = await _messaging.getToken().timeout(const Duration(seconds: 20));
+        if (token == null) lastError = 'getToken() returned null';
+      } catch (e) {
+        lastError = e;
+      }
+      if (token == null && attempt < 3) {
+        await Future.delayed(Duration(seconds: 3 * attempt));
+      }
+    }
+
+    if (token == null) {
+      debugPrint('[TechNotificationService] getToken failed: $lastError');
+      await _reportError('getToken', lastError, permission);
+      return;
+    }
+    debugPrint('[TechNotificationService] FCM Token: $token');
+    if (await _sendTokenToServer(token, permission: permission)) {
+      _lastSuccess = DateTime.now();
+    }
+  }
+
+  static Future<void> _reportError(
+      String stage, Object? error, String permission) async {
+    debugPrint('[TechNotificationService] $stage error: $error');
+    try {
+      if (await StorageService.getAccessToken() == null) return;
+      await ApiClient().dio.post('/auth/fcm-token/error', data: {
+        'app': _appTag,
+        'build': _buildTag,
+        'platform': defaultTargetPlatform.name,
+        'permission': permission,
+        'stage': stage,
+        'error': error?.toString() ?? 'unknown',
+      });
+    } catch (_) {
+      // Reporting is best-effort (no network → nothing we can do).
     }
   }
 
@@ -213,12 +282,14 @@ class NotificationService {
     }
   }
 
-  static Future<void> _sendTokenToServer(String token) async {
+  /// Returns true when the server stored the token.
+  static Future<bool> _sendTokenToServer(String token,
+      {String permission = 'unknown'}) async {
     try {
       final accessToken = await StorageService.getAccessToken();
       if (accessToken == null) {
         debugPrint('[TechNotificationService] Not authenticated - skipping token upload');
-        return;
+        return false;
       }
 
       final client = ApiClient();
@@ -229,9 +300,13 @@ class NotificationService {
 
       if (response.statusCode == 200) {
         debugPrint('[TechNotificationService] FCM token updated on server');
+        return true;
       }
+      await _reportError('upload', 'HTTP ${response.statusCode}', permission);
+      return false;
     } catch (e) {
-      debugPrint('[TechNotificationService] _sendTokenToServer error: $e');
+      await _reportError('upload', e, permission);
+      return false;
     }
   }
 }
