@@ -19,6 +19,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:dr_ray_technician/core/widgets/price_breakdown.dart';
 
 class TechOrdersScreen extends ConsumerStatefulWidget {
   final String? highlightOrderId;
@@ -1435,7 +1436,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                     color: Colors.white.withOpacity(0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('${order.pricing?['total']} ج.م',
+                  child: Text('${fmtMoney(order.pricing?['total'] as num?)} ج.م',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800,
                           fontFamily: 'Inter', fontSize: 14)),
                 ),
@@ -1509,17 +1510,14 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionHead(icon: Icons.science_rounded, title: 'الفحوصات', color: c.accent),
+                _SectionHead(icon: Icons.science_rounded, title: 'الفحوصات والتكلفة', color: c.accent),
                 const SizedBox(height: 12),
-                ...order.services.map((s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(children: [
-                    Container(width: 6, height: 6,
-                        decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle)),
-                    const SizedBox(width: 10),
-                    Text(s.nameAr, style: TextStyle(color: c.textPrimary, fontSize: 14)),
-                  ]),
-                )),
+                PriceBreakdown(
+                  pricing: order.pricing,
+                  services: order.services,
+                  awaitingPricing: order.needsPricing,
+                  cancelled: order.status == 'cancelled',
+                ),
               ],
             ),
           ),
@@ -2027,7 +2025,7 @@ class _TechOrdersScreenState extends ConsumerState<TechOrdersScreen>
                                 ),
                               ),
                               Text(
-                                '${order.pricing?['total'] ?? 0} جنيه',
+                                '${fmtMoney(order.pricing?['total'] as num?)} جنيه',
                                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: c.primary, fontFamily: 'Cairo'),
                               ),
                             ],
@@ -2284,7 +2282,7 @@ class _AvailableCardState extends State<_AvailableCard> {
                       children: [
                         Row(
                           children: [
-                            Text('${widget.order.pricing?['total'] ?? widget.order.pricing?['servicesTotal']} ج.م',
+                            Text('${fmtMoney((widget.order.pricing?['total'] ?? widget.order.pricing?['servicesTotal']) as num?)} ج.م',
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800,
                                     color: c.primary, fontFamily: 'Inter')),
                             const SizedBox(width: 4),
@@ -2328,6 +2326,13 @@ class _AvailableCardState extends State<_AvailableCard> {
                     _buildDetailRow(context, Icons.calendar_today_outlined, 'موعد الزيارة', _formatOrderTime(widget.order)),
                     if (widget.order.caseDetails?['notes']?.toString().isNotEmpty == true)
                       _buildDetailRow(context, Icons.description_outlined, 'ملاحظات', widget.order.caseDetails?['notes']),
+                    const SizedBox(height: 8),
+                    PriceBreakdown(
+                      pricing: widget.order.pricing,
+                      services: widget.order.services,
+                      awaitingPricing: widget.order.needsPricing,
+                      cancelled: widget.order.status == 'cancelled',
+                    ),
                   ],
                 ),
               ),
@@ -2517,7 +2522,7 @@ class _HistoryCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('${order.pricing?['total']} ج.م',
+              Text('${fmtMoney(order.pricing?['total'] as num?)} ج.م',
                   style: TextStyle(fontWeight: FontWeight.w800, color: c.success,
                       fontSize: 15, fontFamily: 'Inter')),
               Text('مكتمل', style: TextStyle(fontSize: 11, color: c.textMuted)),

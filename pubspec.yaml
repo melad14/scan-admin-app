@@ -1,6 +1,6 @@
 name: dr_ray_technician
 description: Dr Ray Technician - Mobile application for home medical services technicians.
-version: 1.0.2+3
+version: 1.0.3+4
 publish_to: 'none'
 
 environment:
@@ -37,7 +37,12 @@ flutter_launcher_icons:
   image_path: "assets/logo.png"
 
 flutter_native_splash:
-  color: "#FFFFFF"
-  image: "assets/logo.png"
+  # Whole screen in the logo's own background colour so the logo blends in (no white frame).
+  # Images are generated from assets/logo.png — see .agents skill notes (Splash).
+  color: "#060F10"
+  image: "assets/splash_logo.png"        # 1440px = ~360dp: fills the phone width
   android_12:
-    image: "assets/logo.png"
+    # Android 12+ only allows a centred icon clipped to a circle; logo sits inside it
+    image: "assets/splash_android12.png"
+    color: "#060F10"
+    icon_background_color: "#060F10"

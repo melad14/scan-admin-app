@@ -81,6 +81,8 @@ class MedicalOrder {
   final OrderPrescription? prescription;
   final double? technicianRating;
   final String? technicianReview;
+  /// Prescription order not priced yet (services cost unknown)
+  final bool needsPricing;
   final DateTime createdAt;
 
   String? get technicianArrivalTime => schedule?['technicianArrivalTime']?.toString();
@@ -103,6 +105,7 @@ class MedicalOrder {
     this.prescription,
     this.technicianRating,
     this.technicianReview,
+    this.needsPricing = false,
     required this.createdAt,
   });
 
@@ -131,6 +134,7 @@ class MedicalOrder {
       prescription: json['prescription'] != null ? OrderPrescription.fromJson(json['prescription']) : null,
       technicianRating: (json['technicianRating'] as num?)?.toDouble(),
       technicianReview: json['technicianReview'],
+      needsPricing: json['needsPricing'] == true,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
